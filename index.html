@@ -22,67 +22,68 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 :root{
-  --ink:#0D0D0D;--ink2:#1A1A1A;
-  --gold:#B8690A;--gold2:#E8900A;--amber:#D95204;
-  --cream:#FAFAF7;--parch:#F2EEE6;--card:#FFFFFF;
-  --border:#E4DDD2;--text:#1A1A1A;--sub:#6A6055;--muted:#9A9080;
-  --green:#14803C;--red:#B01C1C;--blue:#1A4ED8;
-  --r:7px;--sh:0 1px 4px rgba(0,0,0,.06);--shm:0 4px 18px rgba(0,0,0,.1);
+  --ink:#050505;--ink2:#111111;
+  --gold:#D4AF37;--gold2:#E5A900;--amber:#E05A00;
+  --cream:#FDFBF7;--parch:#F5EEE4;--card:#FFFFFF;
+  --border:#EAE1D5;--text:#1C1917;--sub:#57534E;--muted:#A39E99;
+  --green:#16A34A;--red:#DC2626;--blue:#2563EB;
+  --r:10px;--sh:0 4px 12px rgba(0,0,0,.04);--shm:0 8px 32px rgba(0,0,0,.08);
 }
 /* ─── RESET ─── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;font-size:15px}
 body{font-family:'Nunito Sans',sans-serif;background:var(--cream);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--parch)}::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
+::-webkit-scrollbar{width:12px}
+::-webkit-scrollbar-track{background:var(--cream)}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border:3px solid var(--cream);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--gold)}
 
 /* ─── RUPEE: Noto Sans has guaranteed ₹ glyph on ALL devices ─── */
 .rs{font-family:'Noto Sans',system-ui,sans-serif;font-weight:700;line-height:1;display:inline}
 
 /* ─── HEADER ─── */
-header{background:var(--ink);position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.hdr{max-width:1200px;margin:0 auto;padding:0 18px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
-.logo-mk{width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,var(--gold2),var(--amber));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.logo-txt{display:flex;flex-direction:column}
-.logo-name{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.2px}
-.logo-sub2{font-size:.5rem;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase}
+header{background:rgba(5,5,5,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);position:sticky;top:0;z-index:100;box-shadow:0 1px 0 rgba(255,255,255,0.08), 0 4px 24px rgba(0,0,0,.4)}
+.hdr{max-width:1200px;margin:0 auto;padding:0 18px;height:56px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo-mk{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--gold2),var(--amber));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-family:'Playfair Display',serif;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 2px 10px rgba(224,90,0,.3)}
+.logo-txt{display:flex;flex-direction:column;gap:3px}
+.logo-name{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.2px}
+.logo-sub2{font-size:.55rem;color:rgba(255,255,255,.45);letter-spacing:2px;text-transform:uppercase}
 .nav-links{display:flex;gap:1px}
 .nav-a{color:rgba(255,255,255,.55);text-decoration:none;font-size:.75rem;font-weight:600;padding:5px 9px;border-radius:5px;transition:all .18s;white-space:nowrap}
 .nav-a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.nav-r{display:flex;align-items:center;gap:7px}
+.nav-r{display:flex;align-items:center;gap:7px;justify-self:end}
 .cart-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--gold2),var(--amber));color:#fff;border:none;padding:6px 13px;border-radius:50px;cursor:pointer;font-family:'Nunito Sans',sans-serif;font-size:.75rem;font-weight:800;transition:all .2s;white-space:nowrap;box-shadow:0 2px 8px rgba(184,105,10,.35)}
 .cart-btn:hover{opacity:.9;transform:translateY(-1px)}
 .cart-cnt{background:rgba(0,0,0,.3);color:#fff;width:17px;height:17px;border-radius:50%;font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;min-width:17px}
 .hbg{display:none;background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer;padding:4px}
-.wa-nav{display:flex;align-items:center;gap:4px;background:#25D366;color:#fff;text-decoration:none;padding:5px 10px;border-radius:50px;font-size:.72rem;font-weight:700;transition:opacity .2s}
-.wa-nav:hover{opacity:.9}
 
 /* ─── HERO BANNER: 3-col — contact | CENTER title | actions ─── */
 .hero-bar{
-  background:linear-gradient(90deg,#0C0C0C 0%,#1c0e00 40%,#1c0e00 60%,#0C0C0C 100%);
-  padding:11px 18px;border-bottom:2px solid rgba(184,105,10,.45);
+  background:linear-gradient(135deg,#050505 0%,#1a0c00 50%,#050505 100%);
+  padding:24px 18px;border-bottom:1px solid rgba(229,169,0,.15);
   position:relative;overflow:hidden;
 }
 .hero-bar::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 50% 180% at 50% 50%,rgba(184,105,10,.15),transparent 70%);
+  background:radial-gradient(ellipse 50% 120% at 50% 50%,rgba(229,169,0,.15),transparent 70%);
   pointer-events:none}
 .hero-bar-inner{
-  max-width:1280px;margin:0 auto;
+  max-width:1200px;margin:0 auto;
   display:grid;grid-template-columns:1fr auto 1fr;
   align-items:center;gap:10px;position:relative;z-index:1;
 }
 .hero-left{display:flex;flex-direction:column;gap:3px}
-.hc-item{display:flex;align-items:center;gap:5px;font-size:.63rem;color:rgba(255,255,255,.55);text-decoration:none;transition:color .15s;line-height:1.5}
+.hc-item{display:flex;align-items:center;gap:6px;font-size:.65rem;color:rgba(255,255,255,.55);text-decoration:none;transition:color .15s;line-height:1.5;letter-spacing:0.5px}
 .hc-item:hover{color:var(--gold2)}
-.hc-item b{color:rgba(255,255,255,.82);font-weight:600}
-.hc-icon{font-size:.68rem;flex-shrink:0;width:12px;text-align:center}
-.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px}
-.hero-title{font-family:'Playfair Display',serif;font-size:clamp(.9rem,2vw,1.25rem);font-weight:900;color:#fff;line-height:1.1;white-space:nowrap}
-.hero-title em{color:var(--gold2);font-style:normal}
+.hc-item b{color:rgba(255,255,255,.85);font-weight:600}
+.hc-icon{font-size:.7rem;flex-shrink:0;width:14px;text-align:center}
+.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;margin:8px 0}
+.hero-brand{font-family:'Playfair Display',serif;font-size:clamp(1.8rem, 4vw, 2.8rem);font-weight:900;background:linear-gradient(to right, #FFF, var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;margin-bottom:2px}
+.hero-subtext{font-size:.85rem;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:800;margin-bottom:12px}
 .hero-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:center}
-.hero-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(232,144,10,.2);border:1px solid rgba(232,144,10,.4);color:var(--gold2);padding:2px 8px;border-radius:50px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
-.hero-stat{font-size:.61rem;color:rgba(255,255,255,.38);white-space:nowrap}
-.hero-stat b{color:rgba(255,255,255,.65)}
+.hero-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(232,144,10,.2);border:1px solid rgba(232,144,10,.4);color:var(--gold2);padding:3px 10px;border-radius:50px;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+.hero-stat{font-size:.63rem;color:rgba(255,255,255,.4);white-space:nowrap}
+.hero-stat b{color:rgba(255,255,255,.7)}
 .hero-right{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-shrink:0}
 .hbtn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:50px;font-weight:700;font-size:.75rem;text-decoration:none;transition:all .2s;border:none;cursor:pointer;font-family:'Nunito Sans',sans-serif;white-space:nowrap}
 .hbtn-primary{background:linear-gradient(135deg,var(--gold2),var(--amber));color:#fff;box-shadow:0 2px 10px rgba(184,105,10,.35)}
@@ -95,7 +96,7 @@ header{background:var(--ink);position:sticky;top:0;z-index:100;box-shadow:0 2px 
 .min-bar b{color:var(--gold2)}
 
 /* ─── CAT BAR ─── */
-.cat-bar{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:90;box-shadow:0 1px 5px rgba(0,0,0,.04)}
+.cat-bar{background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,.03)}
 .cat-scrl{max-width:1200px;margin:0 auto;padding:6px 18px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .cat-scrl::-webkit-scrollbar{display:none}
 .cpill{flex-shrink:0;padding:4px 11px;border-radius:50px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:'Nunito Sans',sans-serif;font-size:.72rem;font-weight:600;color:var(--sub);transition:all .18s;white-space:nowrap}
@@ -322,10 +323,14 @@ header{background:var(--ink);position:sticky;top:0;z-index:100;box-shadow:0 2px 
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;padding:8px 17px;border-radius:50px;font-size:.76rem;font-weight:600;z-index:700;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;box-shadow:var(--shm)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-.float-cart{position:fixed;bottom:18px;right:18px;z-index:200;background:var(--ink);color:#fff;width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;font-size:1.1rem;box-shadow:var(--shm);display:none;align-items:center;justify-content:center;transition:all .2s}
-.float-cart:hover{background:var(--gold);transform:scale(1.07)}
-.float-cart .fb{position:absolute;top:-4px;right:-4px;background:var(--amber);color:#fff;min-width:17px;height:17px;border-radius:50%;font-size:.6rem;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid var(--cream);padding:0 2px}
+.float-cart{position:fixed;bottom:26px;right:22px;z-index:200;background:linear-gradient(135deg,var(--gold2),var(--amber));color:#fff;height:52px;padding:0 24px;border-radius:50px;border:none;cursor:pointer;font-size:.9rem;font-weight:800;font-family:'Nunito Sans',sans-serif;box-shadow:0 6px 20px rgba(184,105,10,.4);display:none;align-items:center;gap:8px;transition:transform .2s;white-space:nowrap}
+.float-cart:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(184,105,10,.5)}
+.float-cart .fb{background:rgba(0,0,0,.3);color:#fff;min-width:18px;height:18px;border-radius:50%;font-size:.6rem;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 3px}
 .float-cart .fb.show{display:flex}
+
+.back-top{position:fixed;bottom:26px;left:22px;z-index:200;width:52px;height:52px;background:var(--ink);color:var(--gold2);border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translateY(15px);transition:all .3s}
+.back-top.show{opacity:1;pointer-events:auto;transform:translateY(0)}
+.back-top:hover{background:var(--gold2);color:var(--ink);transform:translateY(-3px);box-shadow:0 8px 24px rgba(229,169,0,.5)}
 
 .mnav{position:fixed;inset:0;background:var(--ink);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transform:translateX(-100%);transition:transform .3s}
 .mnav.open{transform:translateX(0)}
@@ -416,7 +421,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
 <header>
   <div class="hdr">
     <a class="logo" href="#">
-      <div class="logo-mk">🎆</div>
+      <div class="logo-mk">SS</div>
       <div class="logo-txt">
         <span class="logo-name">SS Enterprises</span>
         <span class="logo-sub2">Sivakasi · Est. 2022</span>
@@ -429,7 +434,6 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
       <a class="nav-a" href="reports.html" target="_blank" rel="noopener noreferrer">Reports</a>
     </div>
     <div class="nav-r">
-      <a class="wa-nav" href="https://wa.me/919442554183?text=Hi%2C%20I%20want%20to%20enquire%20about%20crackers%20from%20SS%20Enterprises" target="_blank" rel="noopener noreferrer">💬 WhatsApp</a>
       <button class="cart-btn" onclick="openDrawer()">🛒 Cart <span class="cart-cnt" id="ccn">0</span></button>
       <button class="hbg" onclick="document.getElementById('mnav').classList.add('open')">☰</button>
     </div>
@@ -441,14 +445,15 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
   <div class="hero-bar-inner">
     <!-- LEFT: Contact details -->
     <div class="hero-left">
-      <a class="hc-item" href="tel:+919442554183"><span class="hc-icon">📞</span><span>+91 9442554183</span></a>
-      <a class="hc-item" href="https://wa.me/919442554183?text=Hi%2C%20I%20want%20to%20enquire" target="_blank" rel="noopener noreferrer"><span class="hc-icon">💬</span><span><b>WhatsApp</b> us anytime</span></a>
-      <a class="hc-item" href="mailto:ssenterprises@gmail.com"><span class="hc-icon">📧</span><span><b>ssenterprises@gmail.com</b></span></a>
+      <a class="hc-item" href="tel:+919677319562 / +918610902237"><span class="hc-icon">📞</span><span>+91 9677319562 / 8610902237</span></a>
+      <a class="hc-item" href="https://wa.me/918610902237?text=Hi%2C%20I%20want%20to%20enquire" target="_blank" rel="noopener noreferrer"><span class="hc-icon">💬</span><span><b>WhatsApp</b> us anytime</span></a>
+      <a class="hc-item" href="mailto:rmanoharan475@gmail.com"><span class="hc-icon">📧</span><span><b>rmanoharan475@gmail.com</b></span></a>
       <span class="hc-item"><span class="hc-icon">📍</span><span>3/224, C.N.Patti Road, Alamarathupatti(PO), Thirurhangal(VIA), Sivakasi -626130</span></span>
     </div>
-    <!-- CENTER: Title + subtitle (centered) -->
+    <!-- CENTER: Typography Logo -->
     <div class="hero-center">
-      <div class="hero-title">SS Enterprises &nbsp;<em>Sivakasi's Finest</em></div>
+      <div class="hero-brand">SS Enterprises</div>
+      <div class="hero-subtext">Sivakasi's Finest Crackers</div>
       <div class="hero-meta">
         <span class="hero-badge">Min Order: <span id="minPill">₹3,000</span></span>
         <span class="hero-stat"><b>170+</b> products · <b>3+</b> yrs · <b>100%</b> authentic</span>
@@ -457,7 +462,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
     <!-- RIGHT: Browse Products button only (cart is in header) -->
     <div class="hero-right">
       <a href="#shop" class="hbtn hbtn-primary">🎇 Browse Products</a>
-      <a href="https://wa.me/919442554183?text=Hi%2C%20I%20want%20to%20place%20an%20order%20from%20SS%20Enterprises" class="hbtn hbtn-wa" target="_blank" rel="noopener noreferrer">💬 WhatsApp Order</a>
+      <a href="https://wa.me/918610902237?text=Hi%2C%20I%20want%20to%20place%20an%20order%20from%20SS%20Enterprises" class="hbtn hbtn-wa" target="_blank" rel="noopener noreferrer">💬 WhatsApp Order</a>
     </div>
   </div>
 </div>
@@ -508,10 +513,11 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
     <div class="cs-block">
       <div class="cs-title">📞 Contact Us</div>
       <div class="cs-row"><span class="cs-ic">📍</span><span class="cs-lbl">Address</span><span class="cs-val">3/224, C.N.Patti Road, Alamarathupatti(PO), Thirurhangal(VIA), Sivakasi -626130</span></div>
-      <div class="cs-row"><span class="cs-ic">📞</span><span class="cs-lbl">Phone</span><span class="cs-val"><a href="tel:+919442554183">+91 9442554183</a>&nbsp;/&nbsp;<a href="tel:+919442554183"></a></span></div>
-      <div class="cs-row"><span class="cs-ic">📧</span><span class="cs-lbl">Email</span><span class="cs-val"><a class="hc-item" href="mailto:ssenterprises@gmail.com"><span class="hc-icon">📧</span><span><b>ssenterprises@gmail.com</b></span></a></span></div>
+      <div class="cs-row"><span class="cs-ic">📞</span><span class="cs-lbl">Call</span><span class="cs-val"><a href="tel:+919677319562 / +918610902237">+91 9677319562 / 8610902237</a></span></div>
+      <div class="cs-row"><span class="cs-ic">💬</span><span class="cs-lbl">WhatsApp</span><span class="cs-val"><a href="https://wa.me/918610902237" target="_blank" rel="noopener noreferrer">+91 8610902237</a></span></div>
+      <div class="cs-row"><span class="cs-ic">📧</span><span class="cs-lbl">Email</span><span class="cs-val"><a class="hc-item" href="mailto:rmanoharan475@gmail.com"><span class="hc-icon" style="display:none"></span><span><b>rmanoharan475@gmail.com</b></span></a></span></div>
       <div class="cs-row"><span class="cs-ic">🕐</span><span class="cs-lbl">Hours</span><span class="cs-val">Mon–Sun: 7 AM – 10 PM</span></div>
-      <a class="cs-wa-btn" href="https://wa.me/919442554183?text=Hi%2C%20I%20want%20to%20enquire%20from%20SS%20Enterprises" target="_blank" rel="noopener noreferrer">💬 Chat on WhatsApp</a>
+      <a class="cs-wa-btn" href="https://wa.me/918610902237?text=Hi%2C%20I%20want%20to%20enquire%20from%20SS%20Enterprises" target="_blank" rel="noopener noreferrer">💬 Chat on WhatsApp</a>
     </div>
     <div class="cs-block" id="bank">
       <div class="cs-title">🏦 Axis Bank</div>
@@ -536,7 +542,8 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
   <div class="ft">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:10px">
       <div class="ft-logo">🎆 SS Enterprises
-        <span style="font-size:.55rem;margin-left:8px;opacity:.4;font-weight:400">EST. 2003 &middot; SIVAKASI</span>
+	  <br>
+        <span style="font-size:.55rem;margin-left:8px;opacity:.4;font-weight:400">EST. 2022 &middot; SIVAKASI</span>
       </div>
       <div style="display:flex;gap:8px;font-size:1.1rem">
         <span class="fw-spark" style="animation-delay:0s">🎇</span>
@@ -547,7 +554,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
         <span class="fw-spark" style="animation-delay:2s">🎇</span>
       </div>
     </div>
-    <div class="ft-sub">Sivakasi, Tamil Nadu &middot; <a href="mailto:ssenterprises@gmail.com" style="color:rgba(255,255,255,.4)">ssenterprises@gmail.com</a> &middot; +91 9442554183</div>
+    <div class="ft-sub">Sivakasi, Tamil Nadu &middot; <a href="mailto:rmanoharan475@gmail.com" style="color:rgba(255,255,255,.4)">rmanoharan475@gmail.com</a> &middot; +91 9677319562 / 8610902237</div>
     <div class="ft-links">
       <a href="#shop">Shop</a><a href="#bank">Payment</a>
       <a href="#contact">Contact</a><a href="reports.html" target="_blank" rel="noopener noreferrer">Reports</a>
@@ -564,8 +571,11 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
   </div>
 </footer>
 
+<!-- Back to top -->
+<button class="back-top" id="bttBtn" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <!-- Float cart -->
-<button class="float-cart" id="floatCart" onclick="openDrawer()">🛒<span class="fb" id="fb">0</span></button>
+<button class="float-cart" id="floatCart" onclick="openDrawer()">🛒 Order Now<span class="fb" id="fb">0</span></button>
 
 <!-- Drawer -->
 <div class="dov" id="dov" onclick="closeDrawer()"></div>
@@ -648,8 +658,8 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
 <script>
 'use strict';
 /* ════ CONFIG ════ */
-const SHOP_PHONE = "919442554183";
-const SHOP_EMAIL = "ssenterprises@gmail.com";
+const SHOP_PHONE = "918610902237";
+const SHOP_EMAIL = "rmanoharan475@gmail.com";
 const EJS_SERVICE  = "YOUR_SERVICE_ID";
 const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";
 const EJS_KEY      = "YOUR_PUBLIC_KEY";
@@ -1406,6 +1416,17 @@ if(ftY) ftY.textContent=new Date().getFullYear();
 
 /* Casual deterrent only — DevTools / Save As can still view assets */
 document.addEventListener('contextmenu',function(e){e.preventDefault();},{capture:true});
+
+/* Sync instantly with Admin edits */
+window.addEventListener('storage', function(e){
+  if(e.key === 'kc_products') { renderTable(); updateCartUI(); }
+});
+
+/* Back to Top logic */
+window.addEventListener('scroll', ()=>{
+  const btt = document.getElementById('bttBtn');
+  if(btt) btt.classList.toggle('show', window.scrollY > 400);
+});
 </script>
 </body>
 </html>

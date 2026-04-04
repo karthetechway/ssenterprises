@@ -10,6 +10,7 @@
 <title>Admin – SS Enterprises</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="firebase-config.js"></script>
 <style>
@@ -712,41 +713,64 @@ function handleImgErr(img){
   img.classList.add('v');
 }
 
-function doLogin(){
-  // First run: no credentials set yet → show setup
-  if(!ADMIN_U || !ADMIN_P){
-    document.getElementById('loginSubMsg').textContent = 'First visit — create your admin password below.';
-    showSetup(); return;
-  }
+async function doLogin(){
+  const btn = document.getElementById('loginBtn');
   const u = document.getElementById('lu').value.trim();
   const p = document.getElementById('lp').value;
-  if(u === ADMIN_U && p === ADMIN_P){
+
+  if (!u || !p) {
+    showLoginErr('Please enter both email and password.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+
+  try {
+    // Check if u is formatted as an email for Firebase Auth, if not append a dummy domain for laziness or enforce email.
+    const email = u.includes('@') ? u : u + '@karthe-crackers.com';
+    await firebase.auth().signInWithEmailAndPassword(email, p);
     SESSION_ACTIVE = true;
     document.getElementById('lw').classList.add('gone');
     document.getElementById('app').style.display = 'flex';
     loadAll(); goPage('dash');
     startIdleTimer();
-  } else {
-    const errEl = document.getElementById('le');
-    errEl.textContent = '⚠️ Incorrect username or password.';
-    errEl.style.color = 'var(--red)';
-    errEl.style.display = 'block';
+  } catch (err) {
+    console.error('Auth error:', err);
+    showLoginErr('⚠️ ' + err.message);
     document.getElementById('lp').value = '';
     document.getElementById('lp').focus();
-    // Anti-brute-force: disable the login button briefly
-    const btn = document.getElementById('loginBtn');
-    if(btn){ btn.disabled = true; setTimeout(()=>{ btn.disabled = false; }, 1800); }
+    // Anti-brute-force
+    setTimeout(()=>{ btn.disabled = false; }, 1800);
+  } finally {
+    if(!btn.disabled) btn.disabled = false;
+    btn.textContent = 'Sign In →';
   }
 }
-function doLogout(){
-  SESSION_ACTIVE = false;
-  clearIdleTimer();
-  document.getElementById('lu').value = '';
-  document.getElementById('lp').value = '';
+
+function showLoginErr(msg) {
   const errEl = document.getElementById('le');
-  errEl.style.display = 'none';
-  document.getElementById('lw').classList.remove('gone');
-  document.getElementById('app').style.display = 'none';
+  errEl.textContent = msg;
+  errEl.style.color = 'var(--red)';
+  errEl.style.display = 'block';
+}
+
+function doLogout(){
+  if (firebase.auth) {
+    firebase.auth().signOut().then(() => {
+      SESSION_ACTIVE = false;
+      clearIdleTimer();
+      document.getElementById('lu').value = '';
+      document.getElementById('lp').value = '';
+      document.getElementById('le').style.display = 'none';
+      document.getElementById('lw').classList.remove('gone');
+      document.getElementById('app').style.display = 'none';
+    });
+  } else {
+    SESSION_ACTIVE = false;
+    document.getElementById('lw').classList.remove('gone');
+    document.getElementById('app').style.display = 'none';
+  }
 }
 
 /* ── IDLE AUTO-LOCK (10 minutes) ── */

@@ -42,7 +42,12 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
 // Save order list (called by admin.html and reports.html)
 function syncDatabase(orders) {
   if (db) {
-    db.ref('kc_orders').set(orders).catch(e => console.error("Firebase save error:", e));
+    // Save as an object mapping order id to order data to prevent array overwrites
+    const ordersObj = {};
+    orders.forEach(o => {
+      if(o && o.id) ordersObj[o.id] = o;
+    });
+    db.ref('kc_orders').set(ordersObj).catch(e => console.error("Firebase save error:", e));
   }
   // Always keep a local copy as fallback or for instant local feedback
   localStorage.setItem('kc_orders', JSON.stringify(orders));
@@ -55,10 +60,9 @@ function pushNewOrder(order) {
   localStorage.setItem('kc_orders', JSON.stringify(localOrders));
 
   if (db) {
-    // Save to firebase as array to mirror existing logic, though pushing an object is better usually.
-    // For simplicity, we overwrite the whole array here based on localStorage.
-    // In a prod app, we'd do db.ref('kc_orders').push(order)
-    db.ref('kc_orders').set(localOrders).catch(e => console.error("Firebase push error:", e));
+    // Push exactly one object directly instead of replacing the entire node
+    // This perfectly fixes the race condition and array overwrites!
+    db.ref('kc_orders/' + order.id).set(order).catch(e => console.error("Firebase push error:", e));
   }
 }
 
@@ -67,7 +71,15 @@ function subscribeToOrders(callback) {
   if (db) {
     db.ref('kc_orders').on('value', (snapshot) => {
       const data = snapshot.val();
-      const updatedOrders = data ? data : [];
+      let updatedOrders = [];
+      if (data) {
+        if (Array.isArray(data)) {
+          updatedOrders = data.filter(Boolean); // Clean out nulls from legacy arrays
+        } else {
+          // Convert the secure object structure back into the array Admin expects
+          updatedOrders = Object.values(data).sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+      }
       localStorage.setItem('kc_orders', JSON.stringify(updatedOrders));
       callback(updatedOrders);
     });

@@ -10,6 +10,7 @@
 <title>Reports – SS Enterprises</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="firebase-config.js"></script>
 <style>
@@ -487,40 +488,61 @@ function handleImgErr(img){
   img.classList.add('v');
 }
 
-function doLogin(){
-  if(!REPORTS_U || !REPORTS_P){
-    document.getElementById('loginSubMsg').textContent = 'Create your admin credentials below.';
-    showSetup(); return;
-  }
+async function doLogin(){
+  const btn = document.querySelector('.lb');
   const u = document.getElementById('lu').value.trim();
   const p = document.getElementById('lp').value;
-  if(u === REPORTS_U && p === REPORTS_P){
+
+  if (!u || !p) {
+    showLoginErr('Please enter both email and password.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+
+  try {
+    const email = u.includes('@') ? u : u + '@karthe-crackers.com';
+    await firebase.auth().signInWithEmailAndPassword(email, p);
     SESSION_ACTIVE = true;
     document.getElementById('lw').classList.add('gone');
     document.getElementById('app').style.display = 'flex';
     loadAll(); goPage('dash');
     startIdleTimer();
-  } else {
-    const errEl = document.getElementById('le');
-    errEl.textContent = 'Incorrect credentials.';
-    errEl.style.color = 'var(--red)';
-    errEl.style.display = 'block';
+  } catch (err) {
+    console.error('Auth error:', err);
+    showLoginErr('⚠️ ' + err.message);
     document.getElementById('lp').value = '';
-    // Anti-brute-force: disable button briefly
-    const btn = document.querySelector('.lb');
-    btn.disabled = true;
     setTimeout(()=>{ btn.disabled = false; }, 1500);
+  } finally {
+    if(!btn.disabled) btn.disabled = false;
+    btn.textContent = 'Sign In →';
   }
 }
-function doLogout(){
-  SESSION_ACTIVE = false;
-  clearIdleTimer();
-  document.getElementById('lu').value = '';
-  document.getElementById('lp').value = '';
+
+function showLoginErr(msg) {
   const errEl = document.getElementById('le');
-  errEl.style.display = 'none';
-  document.getElementById('lw').classList.remove('gone');
-  document.getElementById('app').style.display = 'none';
+  errEl.textContent = msg;
+  errEl.style.color = 'var(--red)';
+  errEl.style.display = 'block';
+}
+
+function doLogout(){
+  if (firebase.auth) {
+    firebase.auth().signOut().then(() => {
+      SESSION_ACTIVE = false;
+      clearIdleTimer();
+      document.getElementById('lu').value = '';
+      document.getElementById('lp').value = '';
+      document.getElementById('le').style.display = 'none';
+      document.getElementById('lw').classList.remove('gone');
+      document.getElementById('app').style.display = 'none';
+    });
+  } else {
+    SESSION_ACTIVE = false;
+    document.getElementById('lw').classList.remove('gone');
+    document.getElementById('app').style.display = 'none';
+  }
 }
 
 /* ── IDLE AUTO-LOCK (10 minutes) ── */

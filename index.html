@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://api.emailjs.com https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://api.emailjs.com https://cdn.jsdelivr.net wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
 <title>SS Enterprises – Sivakasi</title>
 <!--
   FIXES APPLIED:
@@ -19,7 +19,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Nunito+Sans:wght@400;500;600;700;800&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="firebase-config.js"></script>
 <style>
 :root{
   --ink:#050505;--ink2:#111111;
@@ -664,9 +667,6 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
 /* ════ CONFIG ════ */
 const SHOP_PHONE = "918610902237";
 const SHOP_EMAIL = "rmanoharan475@gmail.com";
-const EJS_SERVICE  = "YOUR_SERVICE_ID";
-const EJS_TEMPLATE = "YOUR_TEMPLATE_ID";
-const EJS_KEY      = "YOUR_PUBLIC_KEY";
 
 /* ════ SECURITY: XSS + safe URLs ════ */
 function esc(s){
@@ -1224,7 +1224,9 @@ async function submitOrder(){
 
   const ordId=genId();
   const city=document.getElementById('oCity').value.trim();
+  if(!city){toast('⚠️ City is required');return}
   const pin=document.getElementById('oPin').value.trim();
+  if(!pin){toast('⚠️ Pin code is required');return}
   const notes=document.getElementById('oNotes').value.trim();
   const fullAddr=[addr,city,pin].filter(Boolean).join(', ');
   const itemsTxt=cart.map(c=>`${c.name} ×${c.qty} = ₹${(c.price*c.qty).toLocaleString('en-IN')}`).join('\n');
@@ -1232,23 +1234,53 @@ async function submitOrder(){
 
   const order={id:ordId,name,phone,email,address:fullAddr,payment:payMethod,notes,
     items:JSON.parse(JSON.stringify(cart)),total:tot,status:'New',date:new Date().toISOString()};
-  const orders=JSON.parse(localStorage.getItem('kc_orders')||'[]');
-  orders.unshift(order);
-  localStorage.setItem('kc_orders',JSON.stringify(orders));
+  
+  // pushNewOrder handles both Firebase and localStorage fallback
+  pushNewOrder(order);
 
   document.getElementById('confBtn').disabled=true;
   document.getElementById('sendOv').classList.add('show');
 
-  try{
-    emailjs.init(EJS_KEY);
-    await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
-      order_id:ordId,customer_name:name,customer_email:email,customer_phone:phone,
-      customer_address:fullAddr,payment_method:payMethod,
-      items_html:itemsHTML,items_text:itemsTxt,
-      total:'₹'+tot.toLocaleString('en-IN'),notes:notes||'None',
-      shop_email:SHOP_EMAIL,to_email:email,
-    });
-  }catch(e){console.warn('EmailJS:',e.message||e)}
+  const htmlBody = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+      <h2 style="color: #111; border-bottom: 2px solid #E5A900; padding-bottom: 8px;">Order Confirmation - SS Enterprises</h2>
+      <p>Hi <b>${name}</b>,</p>
+      <p>Thank you for your order! Your Order ID is <b style="background:#f4f4f4;padding:3px 8px;border-radius:4px;letter-spacing:1px;">${ordId}</b>.</p>
+      <p><b>Delivery Address:</b><br/>${fullAddr}</p>
+      <p><b>Payment Method:</b> ${payMethod}</p>
+      <p><b>Notes:</b> ${notes||'None'}</p>
+      
+      <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-top:20px; border-color:#e0e0e0;">
+        <thead>
+          <tr style="background:#111; color:#fff;">
+            <th align="left">Item</th>
+            <th align="center">Qty</th>
+            <th align="right">Price</th>
+            <th align="right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+          <tr style="font-size:1.1em; background:#F8F9FA;">
+            <td colspan="3" align="right"><b>Grand Total:</b></td>
+            <td align="right"><b style="color:#d97706;">₹${tot.toLocaleString('en-IN')}</b></td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <br/>
+      <p>Our team will contact you shortly regarding delivery details and payment verification.</p>
+      <hr style="border:none; border-top:1px solid #eee; margin:25px 0;"/>
+      <p style="font-size:0.85em; color:#555;">For any queries, please WhatsApp us at <a href="https://wa.me/${SHOP_PHONE}" style="color:#2563EB;">+${SHOP_PHONE}</a> or email <a href="mailto:${SHOP_EMAIL}" style="color:#2563EB;">${SHOP_EMAIL}</a>.</p>
+      <p style="font-size:0.85em; color:#555;">Best regards,<br/><b style="color:#111;">SS Enterprises</b><br/>Sivakasi</p>
+    </div>
+  `;
+
+  try {
+    await sendConfirmationEmail({id:ordId, cEmail:email}, htmlBody);
+  } catch(e) {
+    console.warn('Firestore Email Request:', e.message||e);
+  }
 
   document.getElementById('sendOv').classList.remove('show');
   closeOrder();
@@ -1282,7 +1314,6 @@ window.addEventListener('storage',e=>{
   if(e.key==='kc_settings'){updateMinDisplay();updateCartUI();}
 });
 
-try{emailjs.init(EJS_KEY);}catch(e){}
 updateMinDisplay();
 renderCatBar();
 renderTable();

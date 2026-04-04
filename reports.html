@@ -6,9 +6,12 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
 <title>Reports – SS Enterprises</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
 <style>
 /* ════════════════════════════════
    ARCHITECTURE FIXES:
@@ -259,9 +262,6 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
       <button type="button" class="lo" style="color:var(--gold);font-size:.72rem" onclick="forgotReportsPassword()">Forgot password? Reset &amp; create new</button>
     </p>
     <div class="le" id="le">Incorrect credentials. Try again.</div>
-    <p class="lh" style="margin-top:10px;max-width:280px;margin-left:auto;margin-right:auto;line-height:1.55">
-      First visit: create your username and password. Stored only on this device (<code style="font-size:.62rem">localStorage</code>).
-    </p>
   </div>
 </div>
 
@@ -489,7 +489,7 @@ function handleImgErr(img){
 
 function doLogin(){
   if(!REPORTS_U || !REPORTS_P){
-    document.getElementById('loginSubMsg').textContent = 'First visit — create your reports password below.';
+    document.getElementById('loginSubMsg').textContent = 'Create your admin credentials below.';
     showSetup(); return;
   }
   const u = document.getElementById('lu').value.trim();
@@ -762,25 +762,23 @@ const DEFAULT_PRODUCTS=[
 ];
 
 function loadAll(){
-  /* Products: try localStorage first, fall back to full 172-item default */
   const sp = localStorage.getItem('kc_products');
   try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
   catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
 
-  const so = localStorage.getItem('kc_orders');
-  try { orders = so ? JSON.parse(so) : []; }
-  catch(e){ orders = []; }
-  if(!orders.length) seedDemo();
-
-  renderDash(); renderOrders(); renderReports();
-  syncTaxInvoices(); // Auto-generate tax invoices for all orders
+  subscribeToOrders((data) => {
+    orders = data;
+    if(!orders.length) seedDemo();
+    renderDash(); renderOrders(); renderReports();
+    syncTaxInvoices(); // Auto-generate tax invoices for all orders
+  });
 }
 function saveProdList(){
   localStorage.setItem('kc_products', JSON.stringify(products));
   localStorage.setItem('kc_products_ts', Date.now()); // signal shop tab
 }
 function saveOrderList(){
-  localStorage.setItem('kc_orders', JSON.stringify(orders));
+  syncDatabase(orders);
   // Auto-generate tax invoices for any orders that don't have one yet
   orders.forEach(o=>generateTaxInvoicesForOrder(o));
 }

@@ -77,7 +77,14 @@ function subscribeToOrders(callback) {
           updatedOrders = data.filter(Boolean); // Clean out nulls from legacy arrays
         } else {
           // Convert the secure object structure back into the array Admin expects
-          updatedOrders = Object.values(data).sort((a, b) => new Date(b.date) - new Date(a.date));
+          updatedOrders = Object.values(data).filter(Boolean).sort((a, b) => {
+            const da = a.date ? new Date(a.date).getTime() : 0;
+            const db = b.date ? new Date(b.date).getTime() : 0;
+            // Fallback for Invalid Date
+            const timeA = isNaN(da) ? 0 : da;
+            const timeB = isNaN(db) ? 0 : db;
+            return timeB - timeA;
+          });
         }
       }
       localStorage.setItem('kc_orders', JSON.stringify(updatedOrders));

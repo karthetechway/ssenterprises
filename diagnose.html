@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Diagnostics</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+    .box { background: #222; border: 1px solid #444; padding: 15px; margin-bottom: 20px; white-space: pre-wrap; word-wrap: break-word;}
+    button { padding: 10px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; }
+    .err { color: #f55; }
+  </style>
+</head>
+<body>
+  <h2>Firebase Realtime Database Diagnostics</h2>
+  <div class="box" id="logBox">Initializing...</div>
+
+  <div id="loginSection" style="display:none; margin-bottom: 20px;">
+    <h3>Admin Login Required to view Database:</h3>
+    Email: <input type="email" id="uEmail" value="rmanoharan475@gmail.com" /> <br><br>
+    Pass: <input type="password" id="uPass" /> <br><br>
+    <button onclick="doDiagLogin()">Login to Firebase</button>
+  </div>
+
+  <div id="testSection" style="display:none;">
+    <button onclick="dumpDB()">1. Dump Entire kc_orders Database</button>
+    <button onclick="testPush()">2. Test Pushing a Dummy Order</button>
+  </div>
+
+  <script>
+    const logBox = document.getElementById('logBox');
+    function log(msg, err=false) {
+      console.log(msg);
+      logBox.innerHTML += `<div class="${err? 'err' : ''}">> ${msg}</div>`;
+    }
+
+    if (!db) {
+       log("❌ ERROR: 'db' is null! Check firebase-config.js", true);
+    } else {
+       log("✅ Firebase 'db' is initialized.");
+       firebase.auth().onAuthStateChanged(user => {
+         if (user) {
+           log("✅ Authenticated as: " + user.email);
+           document.getElementById('loginSection').style.display='none';
+           document.getElementById('testSection').style.display='block';
+         } else {
+           log("⚠️ Not authenticated. Read rules won't work.");
+           document.getElementById('loginSection').style.display='block';
+           document.getElementById('testSection').style.display='none';
+         }
+       });
+    }
+
+    async function doDiagLogin() {
+      const e = document.getElementById('uEmail').value;
+      const p = document.getElementById('uPass').value;
+      try {
+        await firebase.auth().signInWithEmailAndPassword(e, p);
+        log("✅ Login successful");
+      } catch(err) {
+        log("❌ Login Failed: " + err.message, true);
+      }
+    }
+
+    function dumpDB() {
+      log("⏳ Requesting 'kc_orders' from Firebase...");
+      db.ref('kc_orders').once('value').then(snap => {
+        if (!snap.exists()) {
+          log("✅ Read SUCCESS, but Data is EMPTY (null)!");
+        } else {
+          log("✅ Read SUCCESS! Data Dump:");
+          const d = snap.val();
+          log(JSON.stringify(d, null, 2));
+        }
+      }).catch(e => {
+        log("❌ Read Failed: " + e.message, true);
+      });
+    }
+
+    function testPush() {
+      const id = "TEST-" + Math.floor(Math.random()*10000);
+      const data = { id: id, total: 100, name: "Firebase Diagnostic Test" };
+      log(`⏳ Trying to push order to 'kc_orders/${id}' ...`);
+      db.ref('kc_orders/' + id).set(data).then(() => {
+        log("✅ Write SUCCESS! The Rules are allowing the write.");
+      }).catch(e => {
+        log("❌ Write Failed! Rules are rejecting it: " + e.message, true);
+      });
+    }
+  </script>
+</body>
+</html>

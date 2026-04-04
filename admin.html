@@ -1225,13 +1225,13 @@ function renderOrders(){
       <tbody>${f.map(o=>`<tr>
         <td><span style="font-family:monospace;font-size:.68rem;color:var(--blue);cursor:pointer" onclick="openOrd('${escJs(o.id)}')">${o.id}</span></td>
         <td>
-          <div style="font-weight:600;font-size:.75rem">${esc(o.name)}</div>
-          <div style="font-size:.64rem;color:var(--muted)">${esc(o.email)}</div>
-          <div style="font-size:.64rem;color:var(--muted)">${esc(o.phone)}</div>
+          <div style="font-weight:600;font-size:.75rem">${esc(o.name || 'Unknown')}</div>
+          <div style="font-size:.64rem;color:var(--muted)">${esc(o.email || '')}</div>
+          <div style="font-size:.64rem;color:var(--muted)">${esc(o.phone || '')}</div>
         </td>
-        <td style="font-size:.7rem;color:var(--sub)">${o.items.length} item(s)</td>
-        <td>${priceHtml(o.total,'rs-sm','num-md')}</td>
-        <td style="font-size:.7rem">${esc(o.payment)}</td>
+        <td style="font-size:.7rem;color:var(--sub)">${(o.items || []).length} item(s)</td>
+        <td>${priceHtml(o.total || 0,'rs-sm','num-md')}</td>
+        <td style="font-size:.7rem">${esc(o.payment || '-')}</td>
         <td style="font-size:.67rem;color:var(--muted)">${fmtDate(o.date)}</td>
         <td>
           <select class="ssel" onchange="updStatus('${escJs(o.id)}',this.value)">
@@ -1964,7 +1964,7 @@ function renderReports(){
   const rev=orders.filter(o=>o.status!=='Cancelled').reduce((a,o)=>a+o.total,0);
   const avg=orders.length?Math.round(rev/orders.length):0;
   const pm={};
-  orders.forEach(o=>o.items.forEach(i=>{
+  orders.forEach(o=>(o.items || []).forEach(i=>{
     if(!pm[i.name]) pm[i.name]={name:i.name,qty:0,rev:0};
     pm[i.name].qty+=i.qty; pm[i.name].rev+=i.price*i.qty;
   }));

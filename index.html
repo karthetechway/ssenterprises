@@ -22,7 +22,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="firebase-config.js?v=26040413"></script>
+<script src="firebase-config.js?v=26040414"></script>
 <style>
 :root{
   --ink:#050505;--ink2:#111111;
@@ -1236,7 +1236,11 @@ async function submitOrder(){
     items:JSON.parse(JSON.stringify(cart)),total:tot,status:'New',date:new Date().toISOString()};
   
   // pushNewOrder handles both Firebase and localStorage fallback
-  pushNewOrder(order);
+  try {
+    await pushNewOrder(order);
+  } catch(e) {
+    console.warn('Realtime DB push delayed or failed:', e);
+  }
 
   document.getElementById('confBtn').disabled=true;
   document.getElementById('sendOv').classList.add('show');

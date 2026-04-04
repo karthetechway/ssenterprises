@@ -54,7 +54,7 @@ function syncDatabase(orders) {
 }
 
 // Add a single order (called by index.html)
-function pushNewOrder(order) {
+async function pushNewOrder(order) {
   const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
   if (!localOrders.find(o => o.id === order.id)) {
     localOrders.unshift(order);
@@ -64,10 +64,12 @@ function pushNewOrder(order) {
   if (db) {
     // Push exactly one object directly instead of replacing the entire node
     // This perfectly fixes the race condition and array overwrites!
-    db.ref('kc_orders/' + order.id).set(order).catch(e => {
+    try {
+      await db.ref('kc_orders/' + order.id).set(order);
+    } catch(e) {
         console.error("Firebase push error:", e);
         alert("⚠️ Database Write Failed: " + e.message + "\nAre your Firebase Realtime DB rules correct for $orderId?");
-    });
+    }
   }
 }
 

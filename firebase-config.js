@@ -11,7 +11,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyBIJFp8c3RfREOxiEvI8mRWxkXDla-dWsA",
   authDomain: "ss-enterprise-sivakasi.firebaseapp.com",
-  databaseURL: "https://ss-enterprise-sivakasi-default-rtdb.firebaseio.com",
+  databaseURL: "https://ss-enterprise-sivakasi-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "ss-enterprise-sivakasi",
   storageBucket: "ss-enterprise-sivakasi.appspot.com",
   messagingSenderId: "959902392372",

@@ -56,13 +56,18 @@ function syncDatabase(orders) {
 // Add a single order (called by index.html)
 function pushNewOrder(order) {
   const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
-  localOrders.unshift(order);
-  localStorage.setItem('kc_orders', JSON.stringify(localOrders));
+  if (!localOrders.find(o => o.id === order.id)) {
+    localOrders.unshift(order);
+    localStorage.setItem('kc_orders', JSON.stringify(localOrders));
+  }
 
   if (db) {
     // Push exactly one object directly instead of replacing the entire node
     // This perfectly fixes the race condition and array overwrites!
-    db.ref('kc_orders/' + order.id).set(order).catch(e => console.error("Firebase push error:", e));
+    db.ref('kc_orders/' + order.id).set(order).catch(e => {
+        console.error("Firebase push error:", e);
+        alert("⚠️ Database Write Failed: " + e.message + "\nAre your Firebase Realtime DB rules correct for $orderId?");
+    });
   }
 }
 
@@ -77,16 +82,36 @@ function subscribeToOrders(callback) {
           updatedOrders = data.filter(Boolean); // Clean out nulls from legacy arrays
         } else {
           // Convert the secure object structure back into the array Admin expects
-          updatedOrders = Object.values(data).filter(Boolean).sort((a, b) => {
-            const da = a.date ? new Date(a.date).getTime() : 0;
-            const db = b.date ? new Date(b.date).getTime() : 0;
-            // Fallback for Invalid Date
-            const timeA = isNaN(da) ? 0 : da;
-            const timeB = isNaN(db) ? 0 : db;
-            return timeB - timeA;
-          });
+          updatedOrders = Object.values(data).filter(Boolean);
         }
       }
+
+      // AUTO-MERGE FALLBACK: Resets local orders that failed to push due to rules
+      let merged = false;
+      try {
+        const local = JSON.parse(localStorage.getItem('kc_orders') || '[]');
+        local.forEach(lo => {
+          if (!updatedOrders.find(uo => uo.id === lo.id)) {
+             updatedOrders.push(lo);
+             merged = true;
+          }
+        });
+      } catch(err) {}
+
+      // Sort newest first safely
+      updatedOrders.sort((a, b) => {
+        const da = a.date ? new Date(a.date).getTime() : 0;
+        const db = b.date ? new Date(b.date).getTime() : 0;
+        const timeA = isNaN(da) ? 0 : da;
+        const timeB = isNaN(db) ? 0 : db;
+        return timeB - timeA;
+      });
+
+      // If missing orders were found locally, force sync them to Firebase using Admin Auth!
+      if (merged && window.location.pathname.includes('admin')) {
+         syncDatabase(updatedOrders);
+      }
+
       localStorage.setItem('kc_orders', JSON.stringify(updatedOrders));
       callback(updatedOrders);
     });

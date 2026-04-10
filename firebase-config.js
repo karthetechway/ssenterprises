@@ -74,66 +74,75 @@ async function pushNewOrder(order) {
   }
 }
 
+// Track active listener so we can detach before resubscribing (prevents duplicate callbacks)
+let _ordersRef = null;
+
 // Subscribe to database changes (called by admin.html and reports.html)
 function subscribeToOrders(callback) {
+  // Detach any previous listener to prevent duplicates on re-login / loadAll() calls
+  if (_ordersRef) {
+    try { _ordersRef.off(); } catch(e) {}
+    _ordersRef = null;
+  }
+
   if (db) {
-    db.ref('kc_orders').on('value', (snapshot) => {
+    _ordersRef = db.ref('kc_orders');
+    _ordersRef.on('value', (snapshot) => {
       const data = snapshot.val();
       let updatedOrders = [];
       if (data) {
         if (Array.isArray(data)) {
-          updatedOrders = data.filter(Boolean); // Clean out nulls from legacy arrays
+          updatedOrders = data.filter(Boolean);
         } else {
-          // Convert the secure object structure back into the array Admin expects
+          // Firebase stores as object map (id -> order); convert back to array
           updatedOrders = Object.values(data).filter(Boolean);
         }
       }
 
-      // AUTO-MERGE FALLBACK: Resets local orders that failed to push due to rules
-      let merged = false;
+      // Merge any local-only orders that haven't synced to Firebase yet
       try {
         const local = JSON.parse(localStorage.getItem('kc_orders') || '[]');
+        let merged = false;
         local.forEach(lo => {
-          if (!updatedOrders.find(uo => uo.id === lo.id)) {
-             updatedOrders.push(lo);
-             merged = true;
+          if (lo && lo.id && !updatedOrders.find(uo => uo.id === lo.id)) {
+            updatedOrders.push(lo);
+            merged = true;
           }
         });
+        // Push locally-created orders up to Firebase so all devices see them
+        if (merged && window.location.pathname.includes('admin')) {
+          syncDatabase(updatedOrders);
+        }
       } catch(err) {}
 
-      // Sort newest first safely
+      // Sort newest first
       updatedOrders.sort((a, b) => {
-        const da = a.date ? new Date(a.date).getTime() : 0;
-        const db = b.date ? new Date(b.date).getTime() : 0;
-        const timeA = isNaN(da) ? 0 : da;
-        const timeB = isNaN(db) ? 0 : db;
-        return timeB - timeA;
+        const tA = a.date ? (new Date(a.date).getTime() || 0) : 0;
+        const tB = b.date ? (new Date(b.date).getTime() || 0) : 0;
+        return tB - tA;
       });
-
-      // If missing orders were found locally, force sync them to Firebase using Admin Auth!
-      if (merged && window.location.pathname.includes('admin')) {
-         syncDatabase(updatedOrders);
-      }
 
       localStorage.setItem('kc_orders', JSON.stringify(updatedOrders));
       callback(updatedOrders);
     }, (error) => {
-      console.error("Firebase subscription error:", error);
-      alert("⚠️ Firebase Read Error: " + error.message + "\nYour database rules might be denying access. Showing local orders only.");
-      const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
-      callback(localOrders);
-    });
-  } else {
-    // Fallback: Storage event listener for cross-tab sync if no Firebase
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'kc_orders') {
+      // Non-blocking: log error, fall back to localStorage silently
+      console.error('Firebase subscription error:', error.code, error.message);
+      try {
         const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
         callback(localOrders);
+      } catch(e) { callback([]); }
+    });
+  } else {
+    // No Firebase: listen for cross-tab storage changes
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'kc_orders') {
+        try { callback(JSON.parse(localStorage.getItem('kc_orders') || '[]')); }
+        catch(e2) { callback([]); }
       }
     });
-    // Fire initial callback
-    const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
-    callback(localOrders);
+    // Fire immediately with whatever is in localStorage
+    try { callback(JSON.parse(localStorage.getItem('kc_orders') || '[]')); }
+    catch(e) { callback([]); }
   }
 }
 

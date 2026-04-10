@@ -386,16 +386,12 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
 <script>
 'use strict';
 /* ════════════════════════════════════════════════════════
-   AUTH
+   AUTH — Firebase Authentication (no localStorage credentials)
 ════════════════════════════════════════════════════════ */
-/* Credentials stored ONLY in localStorage - never in source code.
-   First visit: user must set password via setup screen. */
-/* Login keys: kc_reports_u / kc_reports_p */
-let REPORTS_U = localStorage.getItem('kc_reports_u') || '';
-let REPORTS_P = localStorage.getItem('kc_reports_p') || '';
 let SESSION_ACTIVE = false;
 let IDLE_TIMER = null;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+let _unsubscribeOrders = null; // track subscription to detach on logout
 
 /* Clean SVG thumbnails — NO watermarks, NO external CDN */
 const CAT_IMG = {
@@ -722,16 +718,25 @@ const DEFAULT_PRODUCTS=[
 ];
 
 function loadAll(){
+  /* Products: try localStorage first, fall back to full 172-item default */
   const sp = localStorage.getItem('kc_products');
   try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
   catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
+  // Orders are already live via subscribeToOrders called at login
+  // Just re-render with current data
+  renderDash(); renderOrders(); renderReports();
+  syncTaxInvoices();
+}
 
-  subscribeToOrders((data) => {
+function _startOrderSync(){
+  // Detach any old subscription first
+  if (_unsubscribeOrders) { try { _unsubscribeOrders(); } catch(e) {} }
+  _unsubscribeOrders = subscribeToOrders((data) => {
     orders = data;
-    // Only seed demo if Firebase is offline and there are truly no orders
-    if(!orders.length && !db) seedDemo();
+    // Only seed demo when Firebase is completely unavailable AND no orders exist
+    if (!orders.length && !db) seedDemo();
     renderDash(); renderOrders(); renderReports();
-    syncTaxInvoices(); // Auto-generate tax invoices for all orders
+    syncTaxInvoices();
   });
 }
 function saveProdList(){
@@ -1529,21 +1534,28 @@ function amountToWords(n){
 }
 
 (function initReports(){
-  if (firebase.auth) {
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        SESSION_ACTIVE = true;
-        document.getElementById('lw').classList.add('gone');
-        document.getElementById('app').style.display = 'flex';
-        loadAll(); goPage('dash');
-        startIdleTimer();
-      } else {
-        SESSION_ACTIVE = false;
-        document.getElementById('lw').classList.remove('gone');
-        document.getElementById('app').style.display = 'none';
-      }
-    });
-  }
+  if (!firebase.auth) { console.error('Firebase Auth not loaded'); return; }
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      SESSION_ACTIVE = true;
+      document.getElementById('lw').classList.add('gone');
+      document.getElementById('app').style.display = 'flex';
+      // Load products first
+      const sp = localStorage.getItem('kc_products');
+      try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
+      catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
+      // Subscribe to live orders ONCE — renders automatically on every update
+      _startOrderSync();
+      goPage('dash');
+      startIdleTimer();
+    } else {
+      SESSION_ACTIVE = false;
+      // Detach Firebase listener on logout
+      if (_unsubscribeOrders) { try { _unsubscribeOrders(); } catch(e) {} _unsubscribeOrders = null; }
+      document.getElementById('lw').classList.remove('gone');
+      document.getElementById('app').style.display = 'none';
+    }
+  });
 })();
 
 document.addEventListener('contextmenu',function(e){e.preventDefault();},{capture:true});

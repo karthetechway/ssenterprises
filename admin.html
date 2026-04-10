@@ -592,13 +592,11 @@ Flower Pots Big,Flower Pots,100,1 Box,🌸,true,30
 /* ════════════════════════════════════════════════════════
    AUTH
 ════════════════════════════════════════════════════════ */
-/* Credentials stored ONLY in localStorage - never in source code.
-   First visit: user must set password via setup screen. */
-let ADMIN_U = localStorage.getItem('kc_admin_u') || '';
-let ADMIN_P = localStorage.getItem('kc_admin_p') || '';
+/* AUTH — Firebase Authentication (no localStorage credentials) */
 let SESSION_ACTIVE = false;
 let IDLE_TIMER = null;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+let _unsubscribeOrders = null; // track subscription to detach on logout
 
 /* STATE VARIABLES */
 let products = [];
@@ -938,14 +936,21 @@ function loadAll(){
   const sp = localStorage.getItem('kc_products');
   try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
   catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
+  // Orders are live via _startOrderSync() called at login
+  // Just re-render with whatever is currently in memory
+  renderDash(); renderOrders(); renderProds(); renderStock(); renderReports(); renderSettingsDisplay();
+  syncTaxInvoices();
+}
 
-  subscribeToOrders((data) => {
+function _startOrderSync(){
+  // Detach any existing subscription before subscribing again
+  if (_unsubscribeOrders) { try { _unsubscribeOrders(); } catch(e) {} }
+  _unsubscribeOrders = subscribeToOrders((data) => {
     orders = data;
-    // Only seed demo if we have absolutely no orders anywhere (first-time offline setup)
-    // Never override real orders coming from Firebase
-    if(!orders.length && !db) seedDemo();
+    // Only seed demo when Firebase is completely offline AND there are no orders
+    if (!orders.length && !db) seedDemo();
     renderDash(); renderOrders(); renderProds(); renderStock(); renderReports(); renderSettingsDisplay();
-    syncTaxInvoices(); // Auto-generate tax invoices for all orders
+    syncTaxInvoices();
   });
 }
 function saveProdList(){
@@ -2204,21 +2209,24 @@ function amountToWords(n){
 }
 
 (function initAdmin(){
-  if (firebase.auth) {
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        SESSION_ACTIVE = true;
-        document.getElementById('lw').classList.add('gone');
-        document.getElementById('app').style.display = 'flex';
-        loadAll(); goPage('dash');
-        startIdleTimer();
-      } else {
-        SESSION_ACTIVE = false;
-        document.getElementById('lw').classList.remove('gone');
-        document.getElementById('app').style.display = 'none';
-      }
-    });
-  }
+  if (!firebase.auth) { console.error('Firebase Auth not loaded'); return; }
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      SESSION_ACTIVE = true;
+      document.getElementById('lw').classList.add('gone');
+      document.getElementById('app').style.display = 'flex';
+      // Subscribe to orders ONCE — callback auto-renders on every real-time update
+      _startOrderSync();
+      goPage('dash');
+      startIdleTimer();
+    } else {
+      SESSION_ACTIVE = false;
+      // Detach Firebase listener on logout to prevent memory leaks
+      if (_unsubscribeOrders) { try { _unsubscribeOrders(); } catch(e) {} _unsubscribeOrders = null; }
+      document.getElementById('lw').classList.remove('gone');
+      document.getElementById('app').style.display = 'none';
+    }
+  });
 })();
 
 document.addEventListener('contextmenu',function(e){e.preventDefault();},{capture:true});

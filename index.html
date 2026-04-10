@@ -323,7 +323,7 @@ header{background:rgba(5,5,5,0.85);backdrop-filter:blur(16px);-webkit-backdrop-f
 .succ-inner p{color:var(--sub);font-size:.79rem;line-height:1.6;margin-bottom:12px}
 .order-id{font-family:monospace;font-size:.82rem;background:var(--parch);padding:4px 10px;border-radius:5px;color:var(--ink);font-weight:700;display:inline-block;margin-bottom:12px}
 
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;padding:8px 17px;border-radius:50px;font-size:.76rem;font-weight:600;z-index:700;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;box-shadow:var(--shm)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--ink);color:#fff;padding:10px 20px;border-radius:50px;font-size:.8rem;font-weight:700;z-index:9999;opacity:0;transition:all .3s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .float-cart{position:fixed;bottom:26px;right:22px;z-index:200;background:linear-gradient(135deg,var(--gold2),var(--amber));color:#fff;height:52px;padding:0 24px;border-radius:50px;border:none;cursor:pointer;font-size:.9rem;font-weight:800;font-family:'Nunito Sans',sans-serif;box-shadow:0 6px 20px rgba(184,105,10,.4);display:none;align-items:center;gap:8px;transition:transform .2s;white-space:nowrap}
@@ -630,11 +630,10 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
         <div class="fg"><label>City</label><input type="text" id="oCity" placeholder="City"/></div>
         <div class="fg"><label>Pincode</label><input type="text" id="oPin" placeholder="Pincode"/></div>
       </div>
-      <div class="fg"><label>Payment Method</label></div>
-      <div class="pay-sel">
-        <div class="pc sel" onclick="selPay(this,'Bank Transfer')"><span class="pc-i">🏦</span><span class="pc-l">Bank</span></div>
-        <div class="pc" onclick="selPay(this,'UPI')"><span class="pc-i">📱</span><span class="pc-l">UPI</span></div>
-        <div class="pc" onclick="selPay(this,'Cash on Delivery')"><span class="pc-i">💵</span><span class="pc-l">COD</span></div>
+      <div class="fg"><label>Payment Options</label></div>
+      <div class="email-note" style="background:#F0FDF4; border-color:#BBF7D0; color:#166534; padding:10px; margin-bottom:11px; line-height: 1.5;">
+        💳 We accept all modes of payment including <strong>Bank Transfer, UPI, and Cards</strong>.<br/>
+        <span style="color:#DC2626; font-weight:700; display:block; margin-top:3px;">❌ Cash on Delivery (COD) is NOT available.</span>
       </div>
       <div class="fg"><label>Notes (Optional)</label><input type="text" id="oNotes" placeholder="Any special instructions…"/></div>
       <div class="email-note">📧 Order confirmation will be emailed to you after placing.</div>
@@ -657,6 +656,14 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
     <div class="order-id" id="oidShow"></div>
     <p>Confirmation sent to <strong id="cemailShow"></strong>. Our team will contact you shortly.</p>
     <button class="btn-confirm" style="width:100%" onclick="document.getElementById('succOv').classList.remove('show')">Done 🎆</button>
+  </div>
+</div>
+
+<div class="send-ov" id="sendOv">
+  <div class="send-box">
+    <div class="spin">⏳</div>
+    <h3 style="color:var(--ink);margin-bottom:6px">Processing...</h3>
+    <p>Please do not close <br/>this window.</p>
   </div>
 </div>
 
@@ -983,7 +990,7 @@ const CATS=[
 ];
 
 /* ════ STATE ════ */
-let cart=[], activeCat='All', payMethod='Bank Transfer';
+let cart=[], activeCat='All', payMethod='Online (Bank / UPI / Cards)';
 
 function loadProducts(){
   try{const s=localStorage.getItem('kc_products');if(s){const a=JSON.parse(s);if(a?.length)return a;}}catch(e){}
@@ -1201,7 +1208,6 @@ function openOrder(){
   document.getElementById('orderOv').classList.add('show');
 }
 function closeOrder(){document.getElementById('orderOv').classList.remove('show')}
-function selPay(el,m){payMethod=m;document.querySelectorAll('.pc').forEach(x=>x.classList.remove('sel'));el.classList.add('sel')}
 
 function genId(){
   const d=new Date();
@@ -1224,9 +1230,9 @@ async function submitOrder(){
 
   const ordId=genId();
   const city=document.getElementById('oCity').value.trim();
-  if(!city){toast('⚠️ City is required');return}
+  if(!city || city.length < 3 || !/^[A-Za-z\s]+$/.test(city)){toast('⚠️ Valid City name required (min 3 letters)');return}
   const pin=document.getElementById('oPin').value.trim();
-  if(!pin){toast('⚠️ Pin code is required');return}
+  if(!pin || !/^\d{6}$/.test(pin)){toast('⚠️ Valid 6-digit Pincode required');return}
   const notes=document.getElementById('oNotes').value.trim();
   const fullAddr=[addr,city,pin].filter(Boolean).join(', ');
   const itemsTxt=cart.map(c=>`${c.name} ×${c.qty} = ₹${(c.price*c.qty).toLocaleString('en-IN')}`).join('\n');

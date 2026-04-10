@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://api.emailjs.com https://cdn.jsdelivr.net wss://*.firebaseio.com https://*.firebaseio.com https://*.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://*.firebasedatabase.app https://*.firebaseio.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://api.emailjs.com https://cdn.jsdelivr.net wss://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebaseio.com https://*.googleapis.com https://*.firebasedatabase.app https://*.firebaseapp.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
 <title>SS Enterprises – Sivakasi</title>
 <!--
   FIXES APPLIED:
@@ -659,14 +659,6 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
   </div>
 </div>
 
-<div class="send-ov" id="sendOv">
-  <div class="send-box">
-    <div class="spin">⏳</div>
-    <h3 style="color:var(--ink);margin-bottom:6px">Processing...</h3>
-    <p>Please do not close <br/>this window.</p>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1227,12 +1219,17 @@ async function submitOrder(){
   const tot=cart.reduce((a,c)=>a+c.price*c.qty,0);
   const minOrd=getMinOrder();
   if(tot<minOrd){toast(`⚠️ Min order ₹${minOrd.toLocaleString('en-IN')}`);return}
+  const city=document.getElementById('oCity').value.trim();
+  if(!city||city.length<3||!/^[A-Za-z\s]+$/.test(city)){toast('⚠️ Valid City name required (letters only, min 3)');return}
+  const pin=document.getElementById('oPin').value.trim();
+  if(!pin||!/^\d{6}$/.test(pin)){toast('⚠️ Valid 6-digit Pincode required');return}
+
+  // All validation passed — lock the button and show loading overlay
+  const confBtn=document.getElementById('confBtn');
+  confBtn.disabled=true;
+  document.getElementById('sendOv').classList.add('show');
 
   const ordId=genId();
-  const city=document.getElementById('oCity').value.trim();
-  if(!city || city.length < 3 || !/^[A-Za-z\s]+$/.test(city)){toast('⚠️ Valid City name required (min 3 letters)');return}
-  const pin=document.getElementById('oPin').value.trim();
-  if(!pin || !/^\d{6}$/.test(pin)){toast('⚠️ Valid 6-digit Pincode required');return}
   const notes=document.getElementById('oNotes').value.trim();
   const fullAddr=[addr,city,pin].filter(Boolean).join(', ');
   const itemsTxt=cart.map(c=>`${c.name} ×${c.qty} = ₹${(c.price*c.qty).toLocaleString('en-IN')}`).join('\n');
@@ -1240,58 +1237,29 @@ async function submitOrder(){
 
   const order={id:ordId,name,phone,email,address:fullAddr,payment:payMethod,notes,
     items:JSON.parse(JSON.stringify(cart)),total:tot,status:'New',date:new Date().toISOString()};
-  
-  // pushNewOrder handles both Firebase and localStorage fallback
+
+  // Push to Firebase with a 10s timeout — order is already in localStorage so user never gets stuck
   try {
-    await pushNewOrder(order);
+    await Promise.race([
+      pushNewOrder(order),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
   } catch(e) {
-    console.warn('Realtime DB push delayed or failed:', e);
+    console.warn('DB push failed or timed out, order saved locally:', e.message||e);
   }
 
-  document.getElementById('confBtn').disabled=true;
-  document.getElementById('sendOv').classList.add('show');
-
-  const htmlBody = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #111; border-bottom: 2px solid #E5A900; padding-bottom: 8px;">Order Confirmation - SS Enterprises</h2>
-      <p>Hi <b>${name}</b>,</p>
-      <p>Thank you for your order! Your Order ID is <b style="background:#f4f4f4;padding:3px 8px;border-radius:4px;letter-spacing:1px;">${ordId}</b>.</p>
-      <p><b>Delivery Address:</b><br/>${fullAddr}</p>
-      <p><b>Payment Method:</b> ${payMethod}</p>
-      <p><b>Notes:</b> ${notes||'None'}</p>
-      
-      <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-top:20px; border-color:#e0e0e0;">
-        <thead>
-          <tr style="background:#111; color:#fff;">
-            <th align="left">Item</th>
-            <th align="center">Qty</th>
-            <th align="right">Price</th>
-            <th align="right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHTML}
-          <tr style="font-size:1.1em; background:#F8F9FA;">
-            <td colspan="3" align="right"><b>Grand Total:</b></td>
-            <td align="right"><b style="color:#d97706;">₹${tot.toLocaleString('en-IN')}</b></td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <br/>
-      <p>Our team will contact you shortly regarding delivery details and payment verification.</p>
-      <hr style="border:none; border-top:1px solid #eee; margin:25px 0;"/>
-      <p style="font-size:0.85em; color:#555;">For any queries, please WhatsApp us at <a href="https://wa.me/${SHOP_PHONE}" style="color:#2563EB;">+${SHOP_PHONE}</a> or email <a href="mailto:${SHOP_EMAIL}" style="color:#2563EB;">${SHOP_EMAIL}</a>.</p>
-      <p style="font-size:0.85em; color:#555;">Best regards,<br/><b style="color:#111;">SS Enterprises</b><br/>Sivakasi</p>
-    </div>
-  `;
+  const htmlBody=`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333"><h2 style="color:#111;border-bottom:2px solid #E5A900;padding-bottom:8px">Order Confirmation – SS Enterprises</h2><p>Hi <b>${name}</b>,</p><p>Thank you for your order! Your Order ID is <b style="background:#f4f4f4;padding:3px 8px;border-radius:4px;letter-spacing:1px">${ordId}</b>.</p><p><b>Delivery Address:</b><br/>${fullAddr}</p><p><b>Payment:</b> ${payMethod}</p><p><b>Notes:</b> ${notes||'None'}</p><table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:20px;border-color:#e0e0e0"><thead><tr style="background:#111;color:#fff"><th align="left">Item</th><th align="center">Qty</th><th align="right">Price</th><th align="right">Total</th></tr></thead><tbody>${itemsHTML}<tr style="font-size:1.1em;background:#F8F9FA"><td colspan="3" align="right"><b>Grand Total:</b></td><td align="right"><b style="color:#d97706">₹${tot.toLocaleString('en-IN')}</b></td></tr></tbody></table><br/><p>Our team will contact you shortly for payment and delivery details.</p><hr style="border:none;border-top:1px solid #eee;margin:25px 0"/><p style="font-size:.85em;color:#555">WhatsApp: <a href="https://wa.me/${SHOP_PHONE}">+${SHOP_PHONE}</a> | Email: <a href="mailto:${SHOP_EMAIL}">${SHOP_EMAIL}</a></p><p style="font-size:.85em;color:#555">Best regards,<br/><b>SS Enterprises</b>, Sivakasi</p></div>`;
 
   try {
-    await sendConfirmationEmail({id:ordId, cEmail:email}, htmlBody);
+    await Promise.race([
+      sendConfirmationEmail({id:ordId,cEmail:email},htmlBody),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('email-timeout')), 5000))
+    ]);
   } catch(e) {
-    console.warn('Firestore Email Request:', e.message||e);
+    console.warn('Email send failed or timed out (non-fatal):', e.message||e);
   }
 
+  // Always complete successfully — never leave user stuck
   document.getElementById('sendOv').classList.remove('show');
   closeOrder();
   document.getElementById('oidShow').textContent='Order ID: '+ordId;
@@ -1300,7 +1268,7 @@ async function submitOrder(){
 
   const waMsg=`🎆 *New Order – SS Enterprises*\n\n🆔 ${ordId}\n👤 ${name}\n📞 ${phone}\n📧 ${email}\n📍 ${fullAddr}\n💳 ${payMethod}\n\n📦 Items:\n${itemsTxt}\n\n💰 Total: ₹${tot.toLocaleString('en-IN')}${notes?'\n📝 '+notes:''}`;
   setTimeout(()=>{const w=window.open('https://wa.me/'+SHOP_PHONE+'?text='+encodeURIComponent(waMsg),'_blank','noopener,noreferrer');if(w)w.opener=null;},600);
-  cart=[];updateCartUI();document.getElementById('confBtn').disabled=false;
+  cart=[];updateCartUI();confBtn.disabled=false;
 }
 
 function quickWA(){

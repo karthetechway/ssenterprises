@@ -68,7 +68,8 @@ async function pushNewOrder(order) {
       await db.ref('kc_orders/' + order.id).set(order);
     } catch(e) {
         console.error("Firebase push error:", e);
-        alert("⚠️ Database Write Failed: " + e.message + "\nAre your Firebase Realtime DB rules correct for $orderId?");
+        // Non-fatal: order is already saved to localStorage, throw so caller can catch
+        throw e;
     }
   }
 }

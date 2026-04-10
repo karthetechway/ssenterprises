@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="firebase-config.js?v=26040413"></script>
 <style>
 /* ════════════════════════════════
@@ -230,24 +231,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
 </head>
 <body>
 
-<!-- FIRST-RUN SETUP SCREEN (shown when no credentials exist) -->
-<div id="setupScreen">
-  <div class="setup-card">
-    <div style="font-size:2rem;margin-bottom:8px">🔐</div>
-    <h2>Reports setup</h2>
-    <p>Welcome — SS Enterprises reports console</p>
-    <p style="font-size:.72rem;color:var(--muted);margin-top:4px;line-height:1.7">
-    First time setup: create your <strong>username &amp; password</strong> for this console.<br/>
-    You'll use these every time you open this page.<br/>
-    Min: 3 chars for username, 8 chars for password.
-    </p>
-    <input class="lf" type="text" id="setupUser" placeholder="Choose a username (min 3 chars)"/>
-    <input class="lf" type="password" id="setupPass" placeholder="Choose a password (min 8 chars)"/>
-    <input class="lf" type="password" id="setupPassC" placeholder="Confirm password"/>
-    <button class="lb" onclick="saveSetup()">Save &amp; Continue →</button>
-    <div class="setup-err" id="setupErr"></div>
-  </div>
-</div>
+
 
 <!-- LOGIN -->
 <div class="lw" id="lw">
@@ -259,9 +243,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
     <input class="lf" type="password" id="lp" placeholder="Password" autocomplete="current-password"
       onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="lb" onclick="doLogin()">Sign In →</button>
-    <p class="lh" style="margin-top:12px">
-      <button type="button" class="lo" style="color:var(--gold);font-size:.72rem" onclick="forgotReportsPassword()">Forgot password? Reset &amp; create new</button>
-    </p>
+
     <div class="le" id="le">Incorrect credentials. Try again.</div>
   </div>
 </div>
@@ -502,13 +484,10 @@ async function doLogin(){
   btn.textContent = 'Verifying...';
 
   try {
-    const email = u.includes('@') ? u : u + '@karthe-crackers.com';
+    const email = u.includes('@') ? u : u + '@ssenterprises.local';
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await firebase.auth().signInWithEmailAndPassword(email, p);
-    SESSION_ACTIVE = true;
-    document.getElementById('lw').classList.add('gone');
-    document.getElementById('app').style.display = 'flex';
-    loadAll(); goPage('dash');
-    startIdleTimer();
+    // Success is handled by onAuthStateChanged in initReports
   } catch (err) {
     console.error('Auth error:', err);
     showLoginErr('⚠️ ' + err.message);
@@ -537,11 +516,7 @@ function doLogout(){
       document.getElementById('le').style.display = 'none';
       document.getElementById('lw').classList.remove('gone');
       document.getElementById('app').style.display = 'none';
-    });
-  } else {
-    SESSION_ACTIVE = false;
-    document.getElementById('lw').classList.remove('gone');
-    document.getElementById('app').style.display = 'none';
+    }).catch(console.error);
   }
 }
 
@@ -567,43 +542,6 @@ function resetIdleTimer(){
 ['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
   document.addEventListener(evt, resetIdleTimer, {passive:true});
 });
-
-/* ── FIRST-RUN SETUP ── */
-function showSetup(){
-  document.getElementById('setupScreen').style.display = 'flex';
-  document.getElementById('lw').classList.add('gone');
-}
-function saveSetup(){
-  const u  = document.getElementById('setupUser').value.trim();
-  const p  = document.getElementById('setupPass').value;
-  const pc = document.getElementById('setupPassC').value;
-  const errEl = document.getElementById('setupErr');
-  errEl.style.display = 'none';
-  if(u.length < 3){ errEl.textContent = 'Username must be at least 3 characters.'; errEl.style.display = 'block'; return; }
-  if(p.length < 8){ errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
-  if(p !== pc){ errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
-  REPORTS_U = u; REPORTS_P = p;
-  localStorage.setItem('kc_reports_u', u);
-  localStorage.setItem('kc_reports_p', p);
-  document.getElementById('setupScreen').style.display = 'none';
-  document.getElementById('lw').classList.remove('gone');
-  const loginErr = document.getElementById('le');
-  loginErr.textContent = '✅ Password set! Please log in now.';
-  loginErr.style.color = 'var(--green)';
-  loginErr.style.display = 'block';
-}
-
-/** Clears saved reports login. */
-function forgotReportsPassword(){
-  if(!confirm('Clear saved username and password and set up new credentials?')) return;
-  localStorage.removeItem('kc_reports_u');
-  localStorage.removeItem('kc_reports_p');
-  REPORTS_U = '';
-  REPORTS_P = '';
-  document.getElementById('le').style.display = 'none';
-  document.getElementById('loginSubMsg').textContent = 'Create new reports credentials below.';
-  showSetup();
-}
 
 
 
@@ -1590,12 +1528,20 @@ function amountToWords(n){
 }
 
 (function initReports(){
-  REPORTS_U = localStorage.getItem('kc_reports_u') || '';
-  REPORTS_P = localStorage.getItem('kc_reports_p') || '';
-  if(!REPORTS_U || !REPORTS_P){
-    const sub = document.getElementById('loginSubMsg');
-    if(sub) sub.textContent = 'First visit — create your reports password below.';
-    showSetup();
+  if (firebase.auth) {
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        SESSION_ACTIVE = true;
+        document.getElementById('lw').classList.add('gone');
+        document.getElementById('app').style.display = 'flex';
+        loadAll(); goPage('dash');
+        startIdleTimer();
+      } else {
+        SESSION_ACTIVE = false;
+        document.getElementById('lw').classList.remove('gone');
+        document.getElementById('app').style.display = 'none';
+      }
+    });
   }
 })();
 

@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="firebase-config.js?v=26040413"></script>
 <style>
 /* ════════════════════════════════
@@ -270,24 +271,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
 
 <canvas id="fwCanvas" aria-hidden="true"></canvas>
 
-<!-- FIRST-RUN SETUP SCREEN (shown when no credentials exist) -->
-<div id="setupScreen">
-  <div class="setup-card">
-    <div style="font-size:2rem;margin-bottom:8px">🔐</div>
-    <h2>Admin Setup</h2>
-    <p>Welcome to SS Enterprises Admin!</p>
-    <p style="font-size:.72rem;color:var(--muted);margin-top:4px;line-height:1.7">
-    First time setup: create your <strong>admin username &amp; password</strong>.<br/>
-    You'll use these every time you log in.<br/>
-    Min: 3 chars for username, 8 chars for password.
-    </p>
-    <input class="lf" type="text" id="setupUser" placeholder="Choose a username (min 3 chars)"/>
-    <input class="lf" type="password" id="setupPass" placeholder="Choose a password (min 8 chars)"/>
-    <input class="lf" type="password" id="setupPassC" placeholder="Confirm password"/>
-    <button class="lb" onclick="saveSetup()">Save &amp; Continue →</button>
-    <div class="setup-err" id="setupErr"></div>
-  </div>
-</div>
+
 
 <!-- LOGIN -->
 <div class="lw" id="lw">
@@ -300,24 +284,6 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
       onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="lb" id="loginBtn" onclick="doLogin()">Sign In →</button>
     <div class="le" id="le"></div>
-    <p class="lh" style="margin-top:14px">
-      <button type="button" class="lo" style="color:var(--gold);font-size:.72rem" onclick="openResetCard()">Forgot password? Reset credentials</button>
-    </p>
-  </div>
-
-  <!-- Password Reset Card (hidden by default) -->
-  <div id="resetCard" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10001;align-items:center;justify-content:center;padding:16px">
-    <div class="setup-card" style="max-width:360px;width:100%">
-      <div style="font-size:1.6rem;margin-bottom:6px">🔑</div>
-      <h2 style="margin-bottom:6px">Reset Admin Password</h2>
-      <p style="font-size:.72rem;color:var(--muted);margin-bottom:16px;line-height:1.6">Enter a new username and password. Your orders and product data will not be affected.</p>
-      <input class="lf" type="text" id="resetUser" placeholder="New username (min 3 chars)"/>
-      <input class="lf" type="password" id="resetPass" placeholder="New password (min 8 chars)"/>
-      <input class="lf" type="password" id="resetPassC" placeholder="Confirm new password"/>
-      <div class="setup-err" id="resetErr"></div>
-      <button class="lb" id="resetSaveBtn" onclick="saveReset()" style="margin-top:8px">Save New Password</button>
-      <button type="button" onclick="closeResetCard()" style="width:100%;margin-top:8px;padding:8px;border:none;background:none;color:var(--muted);font-size:.78rem;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel — go back to login</button>
-    </div>
   </div>
 </div>
 
@@ -327,7 +293,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
   <!-- SIDEBAR -->
   <aside class="sb">
     <div class="sb-top">
-      <div class="sb-brand">🎆 Karthe Admin</div>
+      <div class="sb-brand">🎆 SS Enterprises</div>
       <div class="sb-sub">Management Panel</div>
     </div>
     <nav class="sbn">
@@ -460,7 +426,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
           </div>
           <div class="fg"><label>Shop Display Name</label><input type="text" id="sShopName" placeholder="SS Enterprises"/></div>
           <div class="fg"><label>WhatsApp Number (with country code)</label><input type="text" id="sPhone" placeholder="919842160150"/></div>
-          <div class="fg"><label>Shop Email</label><input type="email" id="sEmail" placeholder="karthecrackers@gmail.com"/></div>
+          <div class="fg"><label>Shop Email</label><input type="email" id="sEmail" placeholder="ssenterprises@gmail.com"/></div>
           <button class="btn b-gold" style="width:100%" onclick="saveSettings()">💾 Save Settings</button>
         </div>
         <div>
@@ -727,20 +693,15 @@ async function doLogin(){
   btn.textContent = 'Verifying...';
 
   try {
-    // Check if u is formatted as an email for Firebase Auth, if not append a dummy domain for laziness or enforce email.
-    const email = u.includes('@') ? u : u + '@karthe-crackers.com';
+    const email = u.includes('@') ? u : u + '@ssenterprises.local';
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await firebase.auth().signInWithEmailAndPassword(email, p);
-    SESSION_ACTIVE = true;
-    document.getElementById('lw').classList.add('gone');
-    document.getElementById('app').style.display = 'flex';
-    loadAll(); goPage('dash');
-    startIdleTimer();
+    // Success is automatically captured by onAuthStateChanged in initAdmin.
   } catch (err) {
     console.error('Auth error:', err);
     showLoginErr('⚠️ ' + err.message);
     document.getElementById('lp').value = '';
     document.getElementById('lp').focus();
-    // Anti-brute-force
     setTimeout(()=>{ btn.disabled = false; }, 1800);
   } finally {
     if(!btn.disabled) btn.disabled = false;
@@ -765,11 +726,7 @@ function doLogout(){
       document.getElementById('le').style.display = 'none';
       document.getElementById('lw').classList.remove('gone');
       document.getElementById('app').style.display = 'none';
-    });
-  } else {
-    SESSION_ACTIVE = false;
-    document.getElementById('lw').classList.remove('gone');
-    document.getElementById('app').style.display = 'none';
+    }).catch(console.error);
   }
 }
 
@@ -796,67 +753,7 @@ function resetIdleTimer(){
   document.addEventListener(evt, resetIdleTimer, {passive:true});
 });
 
-/* ── FIRST-RUN SETUP ── */
-function showSetup(){
-  document.getElementById('setupScreen').style.display = 'flex';
-  document.getElementById('lw').classList.add('gone');
-}
-function saveSetup(){
-  const u  = document.getElementById('setupUser').value.trim();
-  const p  = document.getElementById('setupPass').value;
-  const pc = document.getElementById('setupPassC').value;
-  const errEl = document.getElementById('setupErr');
-  errEl.style.display = 'none';
-  if(u.length < 3){ errEl.textContent = 'Username must be at least 3 characters.'; errEl.style.display = 'block'; return; }
-  if(p.length < 8){ errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
-  if(p !== pc){ errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
-  ADMIN_U = u; ADMIN_P = p;
-  localStorage.setItem('kc_admin_u', u);
-  localStorage.setItem('kc_admin_p', p);
-  document.getElementById('setupScreen').style.display = 'none';
-  document.getElementById('lw').classList.remove('gone');
-  const loginErr = document.getElementById('le');
-  loginErr.textContent = '✅ Password set! Please log in now.';
-  loginErr.style.color = 'var(--green)';
-  loginErr.style.display = 'block';
-}
 
-/** Opens the in-page reset password card */
-function openResetCard(){
-  const rc = document.getElementById('resetCard');
-  if(!rc) return;
-  ['resetUser','resetPass','resetPassC'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const err = document.getElementById('resetErr'); if(err){ err.textContent=''; err.style.display='none'; }
-  rc.style.display = 'flex';
-}
-function closeResetCard(){
-  const rc = document.getElementById('resetCard');
-  if(rc) rc.style.display = 'none';
-}
-function saveReset(){
-  const u  = (document.getElementById('resetUser')?.value||'').trim();
-  const p  = document.getElementById('resetPass')?.value||'';
-  const pc = document.getElementById('resetPassC')?.value||'';
-  const errEl = document.getElementById('resetErr');
-  errEl.textContent = ''; errEl.style.display = 'none';
-  if(u.length < 3){ errEl.textContent = 'Username must be at least 3 characters.'; errEl.style.display = 'block'; return; }
-  if(p.length < 8){ errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
-  if(p !== pc){ errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
-  ADMIN_U = u; ADMIN_P = p;
-  localStorage.setItem('kc_admin_u', u);
-  localStorage.setItem('kc_admin_p', p);
-  closeResetCard();
-  const loginErr = document.getElementById('le');
-  loginErr.textContent = '✅ Password updated! Please sign in with your new credentials.';
-  loginErr.style.color = 'var(--green)';
-  loginErr.style.display = 'block';
-  document.getElementById('lu').value = u;
-  document.getElementById('lp').value = '';
-  document.getElementById('lp').focus();
-}
-
-/** Legacy compat: keeps forgotAdminPassword so any old bookmarks still work */
-function forgotAdminPassword(){ openResetCard(); }
 
 
 
@@ -1920,13 +1817,13 @@ function renderSettingsDisplay(){
   set('sMinOrder', s.minOrder||3000);
   set('sShopName', s.shopName||'SS Enterprises');
   set('sPhone',    s.shopPhone||'919842160150');
-  set('sEmail',    s.shopEmail||'karthecrackers@gmail.com');
+  set('sEmail',    s.shopEmail||'ssenterprises@gmail.com');
   const disp=document.getElementById('sdisplay');
   if(disp) disp.innerHTML=
     '<div>Min Order: <b>₹'+(s.minOrder||3000).toLocaleString('en-IN')+'</b></div>'+
     '<div>Shop: <b>'+esc(s.shopName||'SS Enterprises')+'</b></div>'+
     '<div>WhatsApp: <b>'+esc(s.shopPhone||'919842160150')+'</b></div>'+
-    '<div>Email: <b>'+esc(s.shopEmail||'karthecrackers@gmail.com')+'</b></div>'+
+    '<div>Email: <b>'+esc(s.shopEmail||'ssenterprises@gmail.com')+'</b></div>'+
     '<div>Admin user: <b>'+(esc(ADMIN_U)||'(not set)')+'</b> &nbsp;|&nbsp; Password: <b>••••••••</b></div>'+
     '<div style="font-size:.64rem;color:var(--muted);margin-top:4px">Password saved in browser only. Use Settings to change it anytime.</div>';
 }
@@ -1937,7 +1834,7 @@ function saveSettings(){
     minOrder,
     shopName:  document.getElementById('sShopName').value.trim()||'SS Enterprises',
     shopPhone: document.getElementById('sPhone').value.trim().replace(/\D/g,'')||'919842160150',
-    shopEmail: document.getElementById('sEmail').value.trim()||'karthecrackers@gmail.com',
+    shopEmail: document.getElementById('sEmail').value.trim()||'ssenterprises@gmail.com',
   };
   localStorage.setItem('kc_settings', JSON.stringify(s));
   renderSettingsDisplay();
@@ -2019,7 +1916,7 @@ function exportCSV(){
   const csv=[hdr,...rows].map(r=>r.join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='karthe-orders-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.download='ssenterprises-orders-'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
 }
 
@@ -2226,7 +2123,7 @@ function printTaxInv(invNo){
 '  <div class="brand">\n'+
 '    <h1>🎆 SS Enterprises</h1>\n'+
 '    <p>71-C, Gandhi Road, Opp. Ramji Poly Pack, Sivakasi – 626 123, Tamil Nadu<br/>'+
-'    Ph: +91 98421 60150 / 60151 &nbsp;·&nbsp; karthecrackers@gmail.com<br/>'+
+'    Ph: +91 98421 60150 / 60151 &nbsp;·&nbsp; ssenterprises@gmail.com<br/>'+
 '    <strong>GSTIN: 33XXXXXXXXXXXXXXX</strong></p>\n'+
 '  </div>\n'+
 '  <div class="inv-head">\n'+
@@ -2266,7 +2163,7 @@ function printTaxInv(invNo){
 '  <div class="sig-box"><p>Received goods in good condition</p><div class="sig-line">Customer Signature &amp; Date</div></div>\n'+
 '  <div class="sig-box" style="text-align:right"><p>For <strong>SS Enterprises</strong>, Sivakasi</p><div class="sig-line">Authorised Signatory</div></div>\n'+
 '</div>\n'+
-'<div class="foot">Thank you for your business! · SS Enterprises · +91 98421 60150 · karthecrackers@gmail.com · Subject to Sivakasi Jurisdiction</div>\n'+
+'<div class="foot">Thank you for your business! · SS Enterprises · +91 98421 60150 · ssenterprises@gmail.com · Subject to Sivakasi Jurisdiction</div>\n'+
 '<script>document.fonts?document.fonts.ready.then(()=>setTimeout(()=>window.print(),300)):setTimeout(()=>window.print(),800);<\/script>\n'+
 '</body></html>');
   w.document.close();
@@ -2305,12 +2202,20 @@ function amountToWords(n){
 }
 
 (function initAdmin(){
-  ADMIN_U = localStorage.getItem('kc_admin_u') || '';
-  ADMIN_P = localStorage.getItem('kc_admin_p') || '';
-  if(!ADMIN_U || !ADMIN_P){
-    const sub = document.getElementById('loginSubMsg');
-    if(sub) sub.textContent = 'First visit — create your admin password below.';
-    showSetup();
+  if (firebase.auth) {
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        SESSION_ACTIVE = true;
+        document.getElementById('lw').classList.add('gone');
+        document.getElementById('app').style.display = 'flex';
+        loadAll(); goPage('dash');
+        startIdleTimer();
+      } else {
+        SESSION_ACTIVE = false;
+        document.getElementById('lw').classList.remove('gone');
+        document.getElementById('app').style.display = 'none';
+      }
+    });
   }
 })();
 

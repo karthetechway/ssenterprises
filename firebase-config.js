@@ -116,6 +116,11 @@ function subscribeToOrders(callback) {
 
       localStorage.setItem('kc_orders', JSON.stringify(updatedOrders));
       callback(updatedOrders);
+    }, (error) => {
+      console.error("Firebase subscription error:", error);
+      alert("⚠️ Firebase Read Error: " + error.message + "\nYour database rules might be denying access. Showing local orders only.");
+      const localOrders = JSON.parse(localStorage.getItem('kc_orders') || '[]');
+      callback(localOrders);
     });
   } else {
     // Fallback: Storage event listener for cross-tab sync if no Firebase

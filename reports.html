@@ -72,22 +72,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .app{display:flex;min-height:100vh}
 
 /* ── SIDEBAR ── */
-.sb{width:210px;background:var(--ink);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;overflow-y:auto}
-.sb-top{padding:16px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-brand{font-family:'Playfair Display',serif;font-size:.88rem;color:#fff;font-weight:900}
-.sb-sub{font-size:.56rem;color:rgba(255,255,255,.28);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
-.sbn{flex:1;padding:8px 7px}
-.sbs{font-size:.56rem;color:rgba(255,255,255,.2);letter-spacing:2px;text-transform:uppercase;padding:8px 8px 3px;margin-top:5px}
-.nb{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;color:rgba(255,255,255,.52);font-size:.77rem;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;margin-bottom:2px;transition:all .2s;text-decoration:none}
-.nb:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.82)}
-.nb.active{background:rgba(201,122,10,.2);color:var(--gold2);border-left:2px solid var(--gold)}
-.nb .ni{font-size:.9rem;width:16px;text-align:center;flex-shrink:0}
-.sb-ft{padding:11px 13px;border-top:1px solid rgba(255,255,255,.07)}
-.lo{display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.32);font-size:.7rem;cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif}
-.lo:hover{color:var(--red)}
+.sb{width:230px;background:#0A0A0A;position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;box-shadow:4px 0 20px rgba(0,0,0,.2);border-right:1px solid rgba(255,255,255,.05)}
+.sb-top{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.05)}
+.sb-brand{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;font-weight:900;letter-spacing:.5px}
+.sb-sub{font-size:.6rem;color:var(--gold2);letter-spacing:3px;text-transform:uppercase;margin-top:4px;font-weight:700;opacity:.8}
+.sbn{flex:1;padding:12px 10px;scrollbar-width:none}
+.sbn::-webkit-scrollbar{display:none}
+.sbs{font-size:.65rem;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;padding:15px 12px 6px;font-weight:700}
+.nb{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;color:rgba(255,255,255,0.7);font-size:.88rem;font-weight:600;cursor:pointer;border:none;background:none;width:100%;text-align:left;margin-bottom:4px;transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);text-decoration:none;position:relative}
+.nb:hover{background:rgba(255,255,255,.07);color:#fff}
+.nb.active{background:linear-gradient(90deg, rgba(201,122,10,.15) 0%, transparent 100%);color:var(--gold2)}
+.nb.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--gold);border-radius:0 4px 4px 0}
+.nb .ni{font-size:1.1rem;width:20px;text-align:center;flex-shrink:0;opacity:.8}
+.nb.active .ni{opacity:1;transform:scale(1.1)}
+.sb-ft{padding:15px;border-top:1px solid rgba(255,255,255,.05);background:rgba(0,0,0,0.2)}
+.lo{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.45);font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;width:100%;padding:10px;border-radius:8px;transition:all .2s}
+.lo:hover{background:rgba(185,28,28,.1);color:var(--red)}
 
 /* ── MAIN ── */
-.main{margin-left:210px;flex:1;padding:18px}
+.main{margin-left:230px;flex:1;padding:24px;background:#FDFDFB}
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px;flex-wrap:wrap}
 .ph{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink)}
 .tbr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -509,6 +512,10 @@ function showLoginErr(msg) {
 
 function doLogout(){
   if (firebase.auth) {
+    // 1. Clear session persistence guard first
+    sessionStorage.removeItem('ss_session_active');
+
+    // 2. Perform Firebase signOut
     firebase.auth().signOut().then(() => {
       SESSION_ACTIVE = false;
       clearIdleTimer();
@@ -1544,7 +1551,9 @@ function amountToWords(n){
 (function initReports(){
   if (!firebase.auth) { console.error('Firebase Auth not loaded'); return; }
   firebase.auth().onAuthStateChanged(user => {
+    // If we have a user, ensure session guard is set
     if (user) {
+      sessionStorage.setItem('ss_session_active', 'true');
       SESSION_ACTIVE = true;
       document.getElementById('lw').classList.add('gone');
       document.getElementById('app').style.display = 'flex';
@@ -1557,6 +1566,13 @@ function amountToWords(n){
       goPage('dash');
       startIdleTimer();
     } else {
+      // Check if session guard exists — if so, this might be a cross-tab logout we should ignore
+      // until the user manually refreshes or logs out here.
+      if (sessionStorage.getItem('ss_session_active') === 'true') {
+        console.warn('Firebase logout detected in other tab, but sessionStorage guard is active. Staying logged in.');
+        return;
+      }
+
       SESSION_ACTIVE = false;
       // Detach Firebase listener on logout
       if (_unsubscribeOrders) { try { _unsubscribeOrders(); } catch(e) {} _unsubscribeOrders = null; }

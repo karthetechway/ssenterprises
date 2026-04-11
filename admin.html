@@ -1153,7 +1153,10 @@ function renderOrders(){
 
 function updStatus(id, s){
   const o=orders.find(x=>x.id===id); if(!o) return;
-  o.status=s; saveOrderList(); renderDash(); renderOrders(); toast('Status → '+s);
+  o.status=s; 
+  updateOrderStatus(id, s); // Atomic update to Firebase + LocalStorage
+  renderDash(); renderOrders(); 
+  toast('Status → '+s);
 }
 function delOrd(id){
   if(!confirm('Delete order '+id+'?')) return;

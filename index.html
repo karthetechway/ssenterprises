@@ -248,6 +248,22 @@ header{background:rgba(5,5,5,0.85);backdrop-filter:blur(16px);-webkit-backdrop-f
 .cit-v{color:var(--ink);font-weight:600;line-height:1.45}
 .cit-v a{color:var(--ink);text-decoration:none}
 .cit-v a:hover{color:var(--gold)}
+
+/* ─── HERO TICKER ─── */
+.hero-marquee{background:var(--ink);color:var(--gold2);padding:10px 0;overflow:hidden;position:relative;border-bottom:1px solid rgba(184,105,10,.3);z-index:100}
+.marquee-content{display:flex;white-space:nowrap;animation:scroll 45s linear infinite;gap:60px}
+.marquee-item{font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:15px;letter-spacing:.5px}
+.m-badge{background:var(--gold);color:var(--ink);padding:2px 8px;border-radius:50px;font-size:.65rem;text-transform:uppercase}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ─── CART PROMO ─── */
+.promo-card{margin-top:12px;background:linear-gradient(135deg,#FF1E56,#FFAC41,#32CCBC,#FF1E56);background-size:400% 400%;animation:gradientBG 8s ease infinite;border-radius:var(--r);padding:20px;text-align:center;color:#fff;box-shadow:0 10px 25px rgba(255,30,86,.4);position:relative;overflow:hidden;border:none}
+.promo-card::before{content:'';position:absolute;inset:0;background:url("https://www.transparenttextures.com/patterns/cubes.png");opacity:.1}
+.promo-title{font-size:1.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;text-shadow:0 2px 10px rgba(0,0,0,.3);animation:brPulse 1.5s infinite alternate}
+.promo-sub{font-size:.78rem;font-weight:700;background:rgba(255,255,255,.2);display:inline-block;padding:4px 12px;border-radius:50px;backdrop-filter:blur(5px)}
+@keyframes gradientBG{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes brPulse{from{transform:scale(1);opacity:1}to{transform:scale(1.08);opacity:.9}}
+
 .wa-cta{display:flex;align-items:center;justify-content:center;gap:5px;background:#25D366;color:#fff;padding:7px 12px;border-radius:50px;text-decoration:none;font-size:.72rem;font-weight:700;margin:8px 12px 10px;transition:all .2s}
 .wa-cta:hover{opacity:.9}
 
@@ -447,6 +463,21 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
   </div>
 </header>
 
+<!-- HERO TICKER: Regional Rules -->
+<div class="hero-marquee">
+  <div class="marquee-content">
+    <div class="marquee-item"><span class="m-badge">Flash Sale</span> 🎆 80% SAVINGS ACROSS ALL CATEGORIES! 🎆</div>
+    <div class="marquee-item"><span class="m-badge">Regional Rules</span> 🚛 Shipping all over India! Min Order Tamilnadu: <b>₹3,000</b></div>
+    <div class="marquee-item"><span class="m-badge">South Zone</span> KA, TG, AP, KL Min Order: <b>₹5,000</b></div>
+    <div class="marquee-item"><span class="m-badge">Updates</span> SS Enterprises - Legacy of Quality Crackers</div>
+    <!-- Duplicate for seamless loop -->
+    <div class="marquee-item"><span class="m-badge">Flash Sale</span> 🎆 80% SAVINGS ACROSS ALL CATEGORIES! 🎆</div>
+    <div class="marquee-item"><span class="m-badge">Regional Rules</span> 🚛 Shipping all over India! Min Order Tamilnadu: <b>₹3,000</b></div>
+    <div class="marquee-item"><span class="m-badge">South Zone</span> KA, TG, AP, KL Min Order: <b>₹5,000</b></div>
+    <div class="marquee-item"><span class="m-badge">Updates</span> SS Enterprises - Legacy of Quality Crackers</div>
+  </div>
+</div>
+
 <!-- ★ Hero Banner: LEFT=contact, CENTER=title, RIGHT=actions -->
 <div class="hero-bar">
   <div class="hero-bar-inner">
@@ -509,6 +540,12 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
         <button class="wa-alt" onclick="quickWA()">💬 Quick WhatsApp Order</button>
         <div class="cart-note">📧 Confirmation will be emailed to you</div>
       </div>
+    </div>
+
+    <!-- CATCHY PROMO BELOW CART -->
+    <div class="promo-card">
+      <div class="promo-title">💥 80% OFF 💥</div>
+      <div class="promo-sub">MEGA SAVINGS · AVAIL NOW!</div>
     </div>
 
       </div>
@@ -589,6 +626,13 @@ footer{background:var(--ink);color:rgba(255,255,255,.38);margin-top:0}
 <div class="drawer" id="drawer">
   <div class="drawer-hd"><span class="drawer-title">🛒 Your Cart</span><button class="drawer-x" onclick="closeDrawer()">✕</button></div>
   <div class="drawer-body" id="drawerBody"></div>
+  <!-- PROMO IN MOBILE DRAWER -->
+  <div style="padding:10px">
+    <div class="promo-card">
+      <div class="promo-title">💥 80% OFF 💥</div>
+      <div class="promo-sub">MEGA SAVINGS · AVAIL NOW!</div>
+    </div>
+  </div>
   <div class="drawer-foot" id="drawerFoot" style="display:none">
     <div class="tot-row"><span class="tot-l">Total</span><span class="tot-v"><span class="rs tot-rs">₹</span><span class="tot-pn" id="drawerTotNum">0</span></span></div>
     <div class="min-warn" id="minWarnD"><b id="minWarnAmt2">₹3,000</b> minimum — add more!</div>

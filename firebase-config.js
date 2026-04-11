@@ -77,9 +77,13 @@ function syncDatabase(orders) {
   // Save to localStorage always (instant local cache)
   try { localStorage.setItem('ss_orders', JSON.stringify(safe)); } catch(e) {}
   if (!db) return;
-  const obj = {};
-  safe.forEach(o => { if (o && o.id) obj[o.id] = o; });
-  db.ref('ss_orders').set(obj).catch(e => console.error('syncDatabase error:', e));
+
+  // Use atomic updates to avoid permission issues with root node writes
+  safe.forEach(o => {
+    if (o && o.id) {
+      db.ref('ss_orders/' + o.id).set(o).catch(e => console.error(`syncDatabase error for ${o.id}:`, e));
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -102,6 +106,29 @@ async function pushNewOrder(order) {
   // Atomic write to a single node — never clobbers other orders
   await db.ref('ss_orders/' + order.id).set(order);
   console.log('✅ Order saved to Firebase:', order.id);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// updateOrderStatus — atomic single-field write (Admin/Reports)
+// ─────────────────────────────────────────────────────────────────────────
+async function updateOrderStatus(id, status) {
+  if (!id || !status) return;
+
+  // 1. Sync local cache first (for instant UI feedback)
+  try {
+    const local = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+    const idx = local.findIndex(o => o.id === id);
+    if (idx >= 0) {
+      local[idx].status = status;
+      localStorage.setItem('ss_orders', JSON.stringify(local));
+    }
+  } catch(e) {}
+
+  // 2. Atomic write to Firebase
+  if (db) {
+    await db.ref('ss_orders/' + id + '/status').set(status);
+    console.log(`✅ Order ${id} status → ${status}`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -351,7 +351,7 @@ code{font-family:monospace;background:var(--parch);padding:1px 5px;border-radius
         • Order total <b>below ₹5,000</b> → Invoice stated amount = <b>₹500</b><br/>
         • Order total <b>₹5,000 – ₹9,999</b> → Invoice amount = <b>₹500 to ₹1,000</b> (proportional)<br/>
         • Order total <b>₹10,000 and above</b> → Invoice amount capped at <b>₹1,000</b><br/>
-        • One invoice per order · Unique number: <code>KC-YYYY-NNNN</code> · HSN: <code>36041000</code><br/>
+        • One invoice per order · Unique number: <code>SS-YYYY-NNNN</code> · HSN: <code>36041000</code><br/>
         • Status: <b>🆕 New</b> = not yet printed &nbsp;|&nbsp; <b>✅ Issued</b> = printed/sent to customer
       </div>
       <div class="filters">
@@ -392,6 +392,11 @@ let SESSION_ACTIVE = false;
 let IDLE_TIMER = null;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 let _unsubscribeOrders = null; // track subscription to detach on logout
+
+/* STATE VARIABLES */
+let products = [];
+let orders = [];
+let stock = []; // for compatibility with admin shared logic if needed
 
 /* Clean SVG thumbnails — NO watermarks, NO external CDN */
 const CAT_IMG = {
@@ -719,7 +724,7 @@ const DEFAULT_PRODUCTS=[
 
 function loadAll(){
   /* Products: try localStorage first, fall back to full 172-item default */
-  const sp = localStorage.getItem('kc_products');
+  const sp = localStorage.getItem('ss_products');
   try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
   catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
   // Orders are already live via subscribeToOrders called at login
@@ -740,8 +745,8 @@ function _startOrderSync(){
   });
 }
 function saveProdList(){
-  localStorage.setItem('kc_products', JSON.stringify(products));
-  localStorage.setItem('kc_products_ts', Date.now()); // signal shop tab
+  localStorage.setItem('ss_products', JSON.stringify(products));
+  localStorage.setItem('ss_products_ts', Date.now()); // signal shop tab
 }
 function saveOrderList(){
   syncDatabase(orders);
@@ -752,22 +757,22 @@ function saveOrderList(){
 /* ────────────────────────────────────────────────────── */
 function seedDemo(){
   orders = [
-    {id:'KC2203AAA',name:'Ramesh Kumar',phone:'9876543210',email:'ramesh@gmail.com',
+    {id:'SS2203AAA',name:'Ramesh Kumar',phone:'9876543210',email:'ramesh@gmail.com',
      address:'12 Main St, Chennai 600001',payment:'Bank Transfer',notes:'',
      items:[{id:82,name:'60 Shot',qty:3,price:1400,cat:'Shots'},
             {id:20,name:'Flower Pots Big',qty:10,price:100,cat:'Flower Pots'}],
      total:5200,status:'Delivered',date:new Date(Date.now()-7*86400000).toISOString()},
-    {id:'KC2203BBB',name:'Priya Devi',phone:'9123456789',email:'priya@yahoo.com',
+    {id:'SS2203BBB',name:'Priya Devi',phone:'9123456789',email:'priya@yahoo.com',
      address:'5 Park Ave, Coimbatore 641001',payment:'UPI',notes:'Diwali order',
      items:[{id:85,name:'240 Shot',qty:1,price:5000,cat:'Shots'},
             {id:132,name:'Bada Peacock',qty:2,price:800,cat:'Fancy Fountain'}],
      total:6600,status:'Shipped',date:new Date(Date.now()-3*86400000).toISOString()},
-    {id:'KC2203CCC',name:'Suresh Babu',phone:'9988776655',email:'suresh@gmail.com',
+    {id:'SS2203CCC',name:'Suresh Babu',phone:'9988776655',email:'suresh@gmail.com',
      address:'78 Gandhi Rd, Madurai 625001',payment:'Bank Transfer',notes:'',
      items:[{id:86,name:'520 Shot',qty:1,price:12000,cat:'Shots'},
             {id:138,name:'10 Cm Electric',qty:20,price:24,cat:'Sparklers'}],
      total:12480,status:'Confirmed',date:new Date(Date.now()-86400000).toISOString()},
-    {id:'KC2203DDD',name:'Anitha Raj',phone:'9876501234',email:'anitha@gmail.com',
+    {id:'SS2203DDD',name:'Anitha Raj',phone:'9876501234',email:'anitha@gmail.com',
      address:'33 Rose Lane, Salem 636001',payment:'COD',notes:'',
      items:[{id:132,name:'Bada Peacock',qty:2,price:800,cat:'Fancy Fountain'},
             {id:75,name:'10000 Wala',qty:1,price:5000,cat:'Wala Garlands'}],
@@ -933,7 +938,7 @@ function renderOrders(){
 
 function updStatus(id, s){
   const o=orders.find(x=>x.id===id); if(!o) return;
-  o.status=s; saveOrderList(); renderDash(); toast('Status → '+s);
+  o.status=s; saveOrderList(); renderDash(); renderOrders(); toast('Status → '+s);
 }
 function delOrd(id){
   if(!confirm('Delete order '+id+'?')) return;
@@ -1291,19 +1296,19 @@ function calcInvoiceAmount(orderTotal){
 }
 
 function getTaxInvoices(){
-  try{ return JSON.parse(localStorage.getItem('kc_tax_invoices')||'[]'); }catch(e){ return []; }
+  try{ return JSON.parse(localStorage.getItem('ss_tax_invoices')||'[]'); }catch(e){ return []; }
 }
 function saveTaxInvoices(arr){
-  localStorage.setItem('kc_tax_invoices', JSON.stringify(arr));
+  localStorage.setItem('ss_tax_invoices', JSON.stringify(arr));
 }
 
-/* Generate sequential invoice number KC-YYYY-NNNN */
+/* Generate sequential invoice number SS-YYYY-NNNN */
 function nextInvNumber(){
   const invs = getTaxInvoices();
   const year = new Date().getFullYear();
-  const same = invs.filter(i=>i.invNo && i.invNo.startsWith('KC-'+year+'-'));
+  const same = invs.filter(i=>i.invNo && i.invNo.startsWith('SS-'+year+'-'));
   const last = same.length ? Math.max(...same.map(i=>parseInt((i.invNo.split('-')[2]||'0').replace(/\/S.*/,''))||0)) : 0;
-  return 'KC-'+year+'-'+String(last+1).padStart(4,'0');
+  return 'SS-'+year+'-'+String(last+1).padStart(4,'0');
 }
 
 /* Auto-generate ONE invoice per order (called on every order save) */
@@ -1541,7 +1546,7 @@ function amountToWords(n){
       document.getElementById('lw').classList.add('gone');
       document.getElementById('app').style.display = 'flex';
       // Load products first
-      const sp = localStorage.getItem('kc_products');
+      const sp = localStorage.getItem('ss_products');
       try { products = sp ? JSON.parse(sp) : DEFAULT_PRODUCTS.map(p=>({...p})); }
       catch(e){ products = DEFAULT_PRODUCTS.map(p=>({...p})); }
       // Subscribe to live orders ONCE — renders automatically on every update

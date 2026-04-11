@@ -75,11 +75,11 @@ function _sortNewestFirst(arr) {
 function syncDatabase(orders) {
   const safe = Array.isArray(orders) ? orders : [];
   // Save to localStorage always (instant local cache)
-  try { localStorage.setItem('kc_orders', JSON.stringify(safe)); } catch(e) {}
+  try { localStorage.setItem('ss_orders', JSON.stringify(safe)); } catch(e) {}
   if (!db) return;
   const obj = {};
   safe.forEach(o => { if (o && o.id) obj[o.id] = o; });
-  db.ref('kc_orders').set(obj).catch(e => console.error('syncDatabase error:', e));
+  db.ref('ss_orders').set(obj).catch(e => console.error('syncDatabase error:', e));
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -90,17 +90,17 @@ async function pushNewOrder(order) {
 
   // Always persist locally first — zero-risk fallback
   try {
-    const local = JSON.parse(localStorage.getItem('kc_orders') || '[]');
+    const local = JSON.parse(localStorage.getItem('ss_orders') || '[]');
     if (!local.find(o => o.id === order.id)) {
       local.unshift(order);
-      localStorage.setItem('kc_orders', JSON.stringify(local));
+      localStorage.setItem('ss_orders', JSON.stringify(local));
     }
   } catch(e) {}
 
   if (!db) return; // No Firebase configured — local-only mode
 
   // Atomic write to a single node — never clobbers other orders
-  await db.ref('kc_orders/' + order.id).set(order);
+  await db.ref('ss_orders/' + order.id).set(order);
   console.log('✅ Order saved to Firebase:', order.id);
 }
 
@@ -116,15 +116,15 @@ function subscribeToOrders(callback) {
   if (!db) {
     console.warn('Firebase not available — using localStorage only');
     const emit = () => {
-      try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('kc_orders') || '[]'))); }
+      try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('ss_orders') || '[]'))); }
       catch(e) { callback([]); }
     };
-    window.addEventListener('storage', e => { if (e.key === 'kc_orders') emit(); });
+    window.addEventListener('storage', e => { if (e.key === 'ss_orders') emit(); });
     emit();
     return () => {}; // no-op unsubscribe
   }
 
-  const ref = db.ref('kc_orders');
+  const ref = db.ref('ss_orders');
   let firstCall = true;
 
   // ── Step 1: One-time read for immediate display ──────────────────────
@@ -139,7 +139,7 @@ function subscribeToOrders(callback) {
     console.error('once() read failed:', err.code, err.message);
     _showDbError(err.code + ': ' + err.message);
     // Still call back with local data so UI isn't blank
-    try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('kc_orders') || '[]'))); }
+    try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('ss_orders') || '[]'))); }
     catch(e) { callback([]); }
   });
 
@@ -154,7 +154,7 @@ function subscribeToOrders(callback) {
   }, err => {
     console.error('realtime listener error:', err.code, err.message);
     _showDbError(err.code + ': ' + err.message);
-    try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('kc_orders') || '[]'))); }
+    try { callback(_sortNewestFirst(JSON.parse(localStorage.getItem('ss_orders') || '[]'))); }
     catch(e) { callback([]); }
   });
 
@@ -165,7 +165,7 @@ function subscribeToOrders(callback) {
 // Merge Firebase orders with any local-only orders (offline writes)
 function _mergeWithLocal(firebaseOrders) {
   try {
-    const local = JSON.parse(localStorage.getItem('kc_orders') || '[]');
+    const local = JSON.parse(localStorage.getItem('ss_orders') || '[]');
     local.forEach(lo => {
       if (lo && lo.id && !firebaseOrders.find(fo => fo.id === lo.id)) {
         firebaseOrders.push(lo);
@@ -176,7 +176,7 @@ function _mergeWithLocal(firebaseOrders) {
 }
 
 function _cacheLocally(orders) {
-  try { localStorage.setItem('kc_orders', JSON.stringify(orders)); } catch(e) {}
+  try { localStorage.setItem('ss_orders', JSON.stringify(orders)); } catch(e) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────

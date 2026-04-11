@@ -689,7 +689,7 @@ function safeImgSrc(u){
 }
 
 /* ════ SETTINGS ════ */
-function getSettings(){ try{return JSON.parse(localStorage.getItem('kc_settings')||'{}')}catch(e){return {}} }
+function getSettings(){ try{return JSON.parse(localStorage.getItem('ss_settings')||'{}')}catch(e){return {}} }
 function getMinOrder(){ return parseInt(getSettings().minOrder||3000,10) }
 function updateMinDisplay(){
   const m=getMinOrder();
@@ -985,7 +985,7 @@ const CATS=[
 let cart=[], activeCat='All', payMethod='Online (Bank / UPI / Cards)';
 
 function loadProducts(){
-  try{const s=localStorage.getItem('kc_products');if(s){const a=JSON.parse(s);if(a?.length)return a;}}catch(e){}
+  try{const s=localStorage.getItem('ss_products');if(s){const a=JSON.parse(s);if(a?.length)return a;}}catch(e){}
   return DEFAULT_PRODUCTS.map(p=>({...p}));
 }
 let P=loadProducts();
@@ -1204,7 +1204,7 @@ function closeOrder(){document.getElementById('orderOv').classList.remove('show'
 function genId(){
   const d=new Date();
   const ds=(d.getDate().toString().padStart(2,'0'))+(( d.getMonth()+1).toString().padStart(2,'0'));
-  return 'KC'+ds+Math.random().toString(36).toUpperCase().slice(2,5);
+  return 'SS'+ds+Math.random().toString(36).toUpperCase().slice(2,5);
 }
 
 async function submitOrder(){
@@ -1288,8 +1288,8 @@ function toast(m){
 function cpy(txt){navigator.clipboard.writeText(txt).then(()=>toast('Copied!')).catch(()=>{})}
 
 window.addEventListener('storage',e=>{
-  if(e.key==='kc_products'||e.key==='kc_products_ts'){P=loadProducts();renderTable();}
-  if(e.key==='kc_settings'){updateMinDisplay();updateCartUI();}
+  if(e.key==='ss_products'||e.key==='ss_products_ts'){P=loadProducts();renderTable();}
+  if(e.key==='ss_settings'){updateMinDisplay();updateCartUI();}
 });
 
 updateMinDisplay();
@@ -1432,7 +1432,7 @@ document.addEventListener('contextmenu',function(e){e.preventDefault();},{captur
 
 /* Sync instantly with Admin edits */
 window.addEventListener('storage', function(e){
-  if(e.key === 'kc_products') { renderTable(); updateCartUI(); }
+  if(e.key === 'ss_products') { renderTable(); updateCartUI(); }
 });
 
 /* Back to Top logic */
